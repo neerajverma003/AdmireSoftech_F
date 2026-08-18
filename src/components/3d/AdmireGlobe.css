@@ -1,0 +1,10 @@
+.admire-globe {
+  width: 100%;
+  height: 520px;
+  min-height: 320px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.admire-globe:active { cursor: grabbing; }
+.admire-globe canvas { display:block; width:100%; height:100%; }

@@ -1,0 +1,14 @@
+.services-3d {
+  width: 100%;
+  height: 480px;
+  min-height: 320px;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+.services-3d:active { cursor: grabbing; }
+.services-3d canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
