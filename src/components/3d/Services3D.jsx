@@ -136,16 +136,22 @@ const Services3D = ({ onSelectCategory }) => {
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
     camera.position.set(0, 0, 11.5);
 
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.35;
-    container.appendChild(renderer.domElement);
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'default',
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.35;
+      container.appendChild(renderer.domElement);
+    } catch (e) {
+      console.warn('WebGL initialization failed in Services3D, graceful fallback active:', e);
+      return;
+    }
 
     // ───── ROOT GROUP ─────
     const rootGroup = new THREE.Group();
@@ -504,20 +510,13 @@ const Services3D = ({ onSelectCategory }) => {
       cancelAnimationFrame(animationFrameId);
       resizeObserver.disconnect();
 
-      if (container && renderer.domElement && container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
+      if (renderer) {
+        if (container && renderer.domElement && container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement);
+        }
+        renderer.dispose();
+        renderer.forceContextLoss();
       }
-
-      boxGeometry.dispose();
-      edgeGeometry.dispose();
-      ring1Geo.dispose();
-      ring1Mat.dispose();
-      ring2Geo.dispose();
-      ring2Mat.dispose();
-      particlesGeo.dispose();
-      particlesMat.dispose();
-      Object.values(textures).forEach((t) => t.dispose());
-      renderer.dispose();
     };
   }, []);
 

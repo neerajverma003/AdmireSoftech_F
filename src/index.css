@@ -108,3 +108,131 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* ─── Tech Stack Orbit & Spotlight Utilities ─── */
+@keyframes spin-clockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-counter-clockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.animate-spin-orbit {
+  animation: spin-clockwise 45s linear infinite;
+}
+
+.animate-spin-orbit-slow {
+  animation: spin-clockwise 65s linear infinite;
+}
+
+.animate-spin-orbit-reverse {
+  animation: spin-counter-clockwise 55s linear infinite;
+}
+
+.hover-pause:hover {
+  animation-play-state: paused;
+}
+
+/* Mouse-tracking Spotlight Glow Card with Surface & Border Illumination */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Surface Ambient Cursor Spotlight */
+.spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(400px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+      rgba(6, 182, 212, 0.16),
+      rgba(37, 99, 235, 0.08) 40%,
+      transparent 80%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Dynamic Border Cursor Spotlight */
+.spotlight-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: radial-gradient(300px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+      rgba(6, 182, 212, 0.5),
+      rgba(37, 99, 235, 0.25) 30%,
+      transparent 70%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.spotlight-card:hover::before,
+.spotlight-card:hover::after {
+  opacity: 1;
+}
+
+/* Text gradient animation */
+.text-gradient-animate {
+  background-size: 200% auto;
+  animation: text-gradient-flow 4s ease infinite;
+}
+
+@keyframes text-gradient-flow {
+  0% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 0% center;
+  }
+}
+
+/* ─── Infinite Running Logo Marquee Ticker ─── */
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.animate-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+
