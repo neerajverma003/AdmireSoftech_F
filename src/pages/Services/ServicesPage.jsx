@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { servicesData } from '../../data/services';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
+import WhyChooseUsTestimonials from '../../components/common/WhyChooseUsTestimonials';
+import CtaBanner from '../../components/common/CtaBanner';
 
 const Services3D = lazy(() => import('../../components/3d/Services3D'));
 
@@ -332,6 +334,12 @@ const ServicesPage = () => {
           </div>
         )}
       </section>
+
+      {/* ──── STREAMLINE WORKFLOW CTA BANNER ──── */}
+      <CtaBanner onOpenModal={() => setIsQuoteModalOpen(true)} />
+
+      {/* ──── WHY CHOOSE US & TESTIMONIALS SECTION ──── */}
+      <WhyChooseUsTestimonials onOpenQuoteModal={() => setIsQuoteModalOpen(true)} />
 
       {/* ───── SERVICE DETAIL MODAL (Rendered at Body Level via Portal) ───── */}
       {selectedService &&

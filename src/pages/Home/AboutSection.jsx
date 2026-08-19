@@ -58,10 +58,10 @@ const AboutSection = () => {
       <div className="pointer-events-none absolute -top-20 -left-20 h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[140px]" />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
+        <div className="grid grid-cols-1 items-center gap-10 lg:gap-12 lg:grid-cols-12">
 
-          {/* LEFT COLUMN: Content (7 cols) */}
-          <div className="lg:col-span-7 space-y-7">
+          {/* LEFT COLUMN: Content (6 cols) */}
+          <div className="lg:col-span-6 space-y-6">
 
             {/* Badge */}
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/40 bg-blue-600/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-cyan-400">
@@ -98,19 +98,19 @@ const AboutSection = () => {
             </p>
 
             {/* 2x2 Feature Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1">
               {features.map((feat) => {
                 const IconComp = iconMap[feat.iconName] || Target;
                 return (
-                  <div key={feat.id || feat.title} className="flex items-start gap-4 group">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-800/60 bg-[#0d1f3c] text-cyan-400 shadow-lg shadow-blue-600/10 transition-transform duration-300 group-hover:scale-110 group-hover:border-cyan-400">
-                      <IconComp className="h-6 w-6" />
+                  <div key={feat.id || feat.title} className="flex items-start gap-3.5 group">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-800/60 bg-[#0d1f3c] text-cyan-400 shadow-lg shadow-blue-600/10 transition-transform duration-300 group-hover:scale-110 group-hover:border-cyan-400">
+                      <IconComp className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-base font-bold text-white group-hover:text-cyan-400 transition-colors">
+                      <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-cyan-400 transition-colors">
                         {feat.title}
                       </h4>
-                      <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                      <p className="text-xs text-slate-400 leading-relaxed mt-0.5">
                         {feat.desc}
                       </p>
                     </div>
@@ -120,7 +120,7 @@ const AboutSection = () => {
             </div>
 
             {/* Bottom Row: CTA Button + Signature */}
-            <div className="flex flex-wrap items-center justify-between gap-6 pt-6 border-t border-slate-800/80">
+            <div className="flex flex-wrap items-center justify-between gap-6 pt-5 border-t border-slate-800/80">
               <button
                 onClick={() => setIsQuoteModalOpen(true)}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#00aaff] to-[#0077ff] hover:from-[#0088ff] hover:to-[#0055cc] px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
@@ -144,14 +144,14 @@ const AboutSection = () => {
 
           </div>
 
-          {/* RIGHT COLUMN: Static Seamless 3D Isometric Illustration (5 cols) */}
-          <div className="lg:col-span-5 relative flex items-center justify-center">
-            {/* Multi-Layer Ambient Backlight Glows */}
-            <div className="pointer-events-none absolute -inset-10 rounded-full bg-gradient-to-tr from-blue-600/35 via-cyan-400/25 to-indigo-600/20 blur-[100px] opacity-80" />
-            <div className="pointer-events-none absolute h-72 w-72 rounded-full bg-cyan-400/15 blur-[90px]" />
+          {/* RIGHT COLUMN: Enlarged 3D Graphic with Ambient Neon Glow (6 cols) */}
+          <div className="lg:col-span-6 relative flex items-center justify-center">
+            {/* Multi-Layer Ambient Backlight Glows matching graphic neon tones */}
+            <div className="pointer-events-none absolute -inset-10 rounded-full bg-gradient-to-tr from-blue-600/35 via-cyan-400/25 to-indigo-600/20 blur-[110px] opacity-90" />
+            <div className="pointer-events-none absolute h-72 w-72 rounded-full bg-cyan-400/20 blur-[90px]" />
 
-            {/* Seamless Static Illustration Container */}
-            <div className="relative w-full max-w-[540px]">
+            {/* Enlarged Graphic Container without hover movement */}
+            <div className="relative w-full max-w-[620px]">
               <img
                 src={imageUrl || '/assets/images/about_isometric_workspace.jpg'}
                 alt="Admire Softech Developer Workstation"
@@ -159,7 +159,7 @@ const AboutSection = () => {
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = '/assets/images/about_isometric_workspace.jpg';
                 }}
-                className="w-full h-auto object-contain [mask-image:radial-gradient(ellipse_85%_80%_at_50%_50%,black_45%,transparent_95%)] [-webkit-mask-image:radial-gradient(ellipse_85%_80%_at_50%_50%,black_45%,transparent_95%)] mix-blend-screen"
+                className="w-full h-auto object-contain [mask-image:radial-gradient(ellipse_92%_88%_at_50%_50%,black_55%,transparent_98%)] [-webkit-mask-image:radial-gradient(ellipse_92%_88%_at_50%_50%,black_55%,transparent_98%)] mix-blend-screen drop-shadow-[0_25px_50px_rgba(6,182,212,0.35)]"
               />
             </div>
           </div>

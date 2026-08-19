@@ -1,5 +1,5 @@
-import React from 'react';
-import logoImg from '../../assets/images/AdmireSoftech_logo.png';
+import { Link } from 'react-router-dom';
+import AdmireLogo from '../../assets/images/AdmireSoftech_logo.png';
 import { Mail, MapPin, ArrowRight } from 'lucide-react';
 
 const Footer = () => {
@@ -12,11 +12,13 @@ const Footer = () => {
 
           {/* Brand */}
           <div className="lg:col-span-4 space-y-5">
-            <img
-              src={logoImg}
-              alt="Admire Softech"
-              className="h-12 w-auto object-contain filter brightness-110 drop-shadow-[0_2px_10px_rgba(6,182,212,0.4)]"
-            />
+            <Link to="/" className="inline-flex items-center group">
+              <img
+                src={AdmireLogo}
+                alt="Admire Softech"
+                className="h-10 sm:h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-300"
+              />
+            </Link>
             <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
               Empowering global enterprises with innovative IT solutions, cloud architectures, and intelligent software engineering.
             </p>
@@ -38,9 +40,21 @@ const Footer = () => {
           <div className="lg:col-span-2 space-y-4">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider">Navigation</h4>
             <ul className="space-y-2 text-sm">
-              {['Home', 'Services', 'Solutions', 'Industries', 'About Us', 'Careers'].map(item => (
-                <li key={item}>
-                  <a href={`#${item.toLowerCase().replace(' ', '')}`} className="hover:text-cyan-400 transition-colors">{item}</a>
+              {[
+                { name: 'Home', href: '/' },
+                { name: 'About Us', href: '/about' },
+                { name: 'Services', href: '/services' },
+                { name: 'Solutions', href: '/solutions' },
+                { name: 'Technologies', href: '/technologies' },
+                { name: 'Industries', href: '/industries' },
+                { name: 'FAQ', href: '/faq' },
+                { name: 'Careers', href: '/careers' },
+                { name: 'Contact', href: '/contact' },
+              ].map((item) => (
+                <li key={item.name}>
+                  <Link to={item.href} className="hover:text-cyan-400 transition-colors">
+                    {item.name}
+                  </Link>
                 </li>
               ))}
             </ul>

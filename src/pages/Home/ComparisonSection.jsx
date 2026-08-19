@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, Zap, ArrowRight } from 'lucide-react';
+import EngineeringLifelineGraph from '../../components/common/EngineeringLifelineGraph';
 
 const ComparisonSection = () => {
   return (
@@ -45,6 +46,9 @@ const ComparisonSection = () => {
             </span>
           </div>
         </motion.div>
+
+        {/* ──── RUNNING SERVICE LIFELINE / EKG GRAPH ──── */}
+        <EngineeringLifelineGraph className="mb-14 -mt-2" />
 
         {/* Comparison Cards Row */}
         <div className="relative max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 items-stretch">

@@ -1,5 +1,5 @@
 import React from 'react';
-import logoImg from '../../assets/images/AdmireSoftech_logo.png';
+import logoImg from '../../assets/images/as_logo_icon.png';
 
 const Logo = ({ variant = 'full', size = 'medium', className = '' }) => {
   // Enhanced height sizing for maximum clarity & visibility

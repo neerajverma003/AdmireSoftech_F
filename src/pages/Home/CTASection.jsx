@@ -1,12 +1,25 @@
-import React, { Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { motion } from 'framer-motion';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import ContactModal from '../../components/common/ContactModal';
 
 // Lazy-load the heavy Three.js globe so it doesn't block initial page paint
 const AdmireGlobe = lazy(() => import('../../components/3d/AdmireGlobe'));
 
-const CTASection = () => {
+const CTASection = ({ onOpenContactModal }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleGetInTouch = (e) => {
+    e.preventDefault();
+    if (onOpenContactModal) {
+      onOpenContactModal();
+    } else {
+      setIsModalOpen(true);
+    }
+  };
+
   return (
-    <section id="contact" className="relative py-20 bg-[#060919] overflow-hidden">
+    <section id="contact" className="relative py-20 bg-[#060919] overflow-hidden font-poppins">
 
       {/* Ambient left-side glow */}
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-72 h-72 bg-blue-600/10 blur-3xl rounded-full pointer-events-none" />
@@ -20,19 +33,32 @@ const CTASection = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="space-y-6"
+            className="space-y-6 text-left"
           >
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3.5 py-1 text-xs font-mono font-semibold uppercase tracking-wider text-cyan-400">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Start Your Transformation</span>
+            </div>
+
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight">
               Let's build something <br />
-              <span className="text-white">amazing together</span>
+              <span className="bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                amazing together
+              </span>
             </h2>
 
-            <a
-              href="mailto:contact@admiresoftech.com"
-              className="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-cyan-500 text-white text-sm font-semibold transition-all duration-300 shadow-[0_0_20px_rgba(37,99,235,0.5)] hover:shadow-[0_0_28px_rgba(6,182,212,0.6)] hover:scale-105 active:scale-95 transform-gpu"
+            <p className="text-sm sm:text-base text-slate-300 font-light max-w-lg leading-relaxed">
+              Accelerate your engineering speed with world-class cloud architects, full-stack specialists, and AI engineers.
+            </p>
+
+            <button
+              type="button"
+              onClick={handleGetInTouch}
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-sm font-bold transition-all duration-300 shadow-[0_0_20px_rgba(37,99,235,0.5)] hover:shadow-[0_0_28px_rgba(6,182,212,0.6)] hover:scale-105 active:scale-95 transform-gpu cursor-pointer"
             >
-              Get In Touch
-            </a>
+              <span>Get In Touch</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </motion.div>
 
           {/* Right — Interactive 3D Globe */}
@@ -64,8 +90,17 @@ const CTASection = () => {
 
         </div>
       </div>
+
+      {/* Embedded Contact Modal */}
+      <ContactModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Let's Build Something Amazing"
+        subtitle="Tell us about your project vision, timeline, or engineering challenges."
+      />
     </section>
   );
 };
 
 export default CTASection;
+
