@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { submitContactForm } from '../../api/contactApi';
 import Toast from './Toast';
+import { useAuth } from '../../context/AuthContext';
 
 const servicesList = [
   'DevOps & Cloud Automation',
@@ -42,8 +43,10 @@ const ContactModal = ({
   title = "Let's Build Something Amazing",
   subtitle = 'Share your project vision or technical requirements with our engineering leaders.',
 }) => {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const { user } = useAuth();
+
+  const [fullName, setFullName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [service, setService] = useState(defaultService);
   const [budget, setBudget] = useState('$15k - $35k');
@@ -52,6 +55,14 @@ const ContactModal = ({
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+
+  // Sync with user details when modal opens or user logs in
+  React.useEffect(() => {
+    if (user && isOpen) {
+      if (!fullName) setFullName(user.name || '');
+      if (!email) setEmail(user.email || '');
+    }
+  }, [user, isOpen]);
 
   // Toast
   const [toastMessage, setToastMessage] = useState('');

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown,
@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   MessageSquare,
 } from 'lucide-react';
-import { FAQ_DATA } from '../../data/faqData';
+import { getActiveFaqs } from '../../api/faqsApi';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
 
 const CATEGORIES = [
@@ -26,13 +26,32 @@ const CATEGORIES = [
 ];
 
 const FaqSection = ({ onOpenContactModal }) => {
+  const [faqs, setFaqs] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [openIndex, setOpenIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchKnowledgeBase = async () => {
+      try {
+        const data = await getActiveFaqs();
+        if (isMounted && Array.isArray(data)) {
+          setFaqs(data);
+        }
+      } catch (err) {
+        console.warn('[FaqSection] Error fetching FAQs from backend:', err.message);
+      }
+    };
+    fetchKnowledgeBase();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const filteredFaqs = useMemo(() => {
-    return FAQ_DATA.filter((item) => {
+    return faqs.filter((item) => {
       const matchesCategory =
         activeCategory === 'All' || item.category === activeCategory;
       const query = searchQuery.toLowerCase().trim();
@@ -43,7 +62,7 @@ const FaqSection = ({ onOpenContactModal }) => {
         item.highlights?.some((h) => h.toLowerCase().includes(query));
       return matchesCategory && matchesQuery;
     });
-  }, [activeCategory, searchQuery]);
+  }, [faqs, activeCategory, searchQuery]);
 
   const toggleFaq = (idx) => {
     setOpenIndex(openIndex === idx ? -1 : idx);
@@ -236,7 +255,7 @@ const FaqSection = ({ onOpenContactModal }) => {
                             : 'bg-slate-800 text-slate-400 border border-slate-700/60 group-hover:text-slate-200'
                         }`}
                       >
-                        {faq.id}
+                        {faq.faqNumber || String(index + 1).padStart(2, '0')}
                       </span>
 
                       <span

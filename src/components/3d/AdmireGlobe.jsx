@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import earthTextureImg from "../../assets/images/3d/earth_atmos.jpg";
 import "./AdmireGlobe.css";
 
 export default function AdmireGlobe() {
@@ -35,7 +36,8 @@ export default function AdmireGlobe() {
 
       const loader = new THREE.TextureLoader();
       loader.load(
-        "https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg",
+        //"https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg",
+        earthTextureImg,
         (texture) => {
           texture.colorSpace = THREE.SRGBColorSpace;
           const earth = new THREE.Mesh(

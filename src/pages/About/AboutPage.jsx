@@ -14,10 +14,11 @@ import {
   Globe,
   Users,
 } from 'lucide-react';
-import { teamMembersData } from '../../data/teamData';
-import { testimonialsData } from '../../data/testimonialsData';
+import { getActiveTestimonials } from '../../api/testimonialsApi';
+import { getActiveTeamMembers } from '../../api/teamApi';
 import CtaBanner from '../../components/common/CtaBanner';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
+import WriteReviewModal from '../../components/common/WriteReviewModal';
 
 const values = [
   {
@@ -70,29 +71,70 @@ const timeline = [
 ];
 
 const AboutPage = () => {
+  const [testimonials, setTestimonials] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   useEffect(() => {
-    if (isPaused || testimonialsData.length === 0) return;
+    let isMounted = true;
+    const fetchPageData = async () => {
+      try {
+        const [reviewsData, teamData] = await Promise.all([
+          getActiveTestimonials().catch(() => []),
+          getActiveTeamMembers().catch(() => []),
+        ]);
+        if (isMounted) {
+          if (Array.isArray(reviewsData)) setTestimonials(reviewsData);
+          if (Array.isArray(teamData)) setTeamMembers(teamData.slice(0, 4));
+        }
+      } catch (err) {
+        console.warn('[AboutPage] Error fetching page data:', err.message);
+      }
+    };
+    fetchPageData();
+
+    // Re-fetch every 30 seconds so admin changes reflect live
+    const pollInterval = setInterval(fetchPageData, 30000);
+
+    // Also re-fetch when user tabs back to the page
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchPageData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isPaused || testimonials.length === 0) return;
 
     const timer = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % testimonialsData.length);
+      setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
     }, 5500);
 
     return () => clearInterval(timer);
-  }, [isPaused]);
+  }, [isPaused, testimonials.length]);
 
   const prevTestimonial = () => {
-    setActiveTestimonial((prev) => (prev === 0 ? testimonialsData.length - 1 : prev - 1));
+    if (testimonials.length === 0) return;
+    setActiveTestimonial((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1));
   };
 
   const nextTestimonial = () => {
-    setActiveTestimonial((prev) => (prev === testimonialsData.length - 1 ? 0 : prev + 1));
+    if (testimonials.length === 0) return;
+    setActiveTestimonial((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
   };
 
-  const t = testimonialsData[activeTestimonial] || testimonialsData[0];
+  const t = testimonials.length > 0 ? (testimonials[activeTestimonial] || testimonials[0]) : null;
 
   return (
     <main className="relative min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16 overflow-hidden">
@@ -267,33 +309,35 @@ const AboutPage = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {teamMembersData.slice(0, 4).map((member) => (
-            <div
-              key={member.id}
-              className="group relative overflow-hidden rounded-3xl border border-slate-800/90 bg-gradient-to-br from-slate-900/90 via-[#0D1836]/60 to-slate-900/90 p-7 text-center transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02] hover:border-cyan-400/50 hover:shadow-[0_20px_40px_-15px_rgba(6,182,212,0.25)]"
-            >
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {teamMembers.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {teamMembers.map((member) => (
+              <div
+                key={member.id || member._id}
+                className="group relative overflow-hidden rounded-3xl border border-slate-800/90 bg-gradient-to-br from-slate-900/90 via-[#0D1836]/60 to-slate-900/90 p-7 text-center transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02] hover:border-cyan-400/50 hover:shadow-[0_20px_40px_-15px_rgba(6,182,212,0.25)]"
+              >
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-              <div className="relative w-28 h-28 mx-auto mb-5">
-                <img
-                  src={member.avatarImg}
-                  alt={member.name}
-                  className="w-full h-full rounded-2xl object-cover border-2 border-blue-600/30 shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:border-cyan-400/60"
-                  loading="lazy"
-                />
+                <div className="relative w-28 h-28 mx-auto mb-5">
+                  <img
+                    src={member.avatarImg || member.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'}
+                    alt={member.name}
+                    className="w-full h-full rounded-2xl object-cover border-2 border-blue-600/30 shadow-lg transition-transform duration-300 group-hover:scale-105 group-hover:border-cyan-400/60"
+                    loading="lazy"
+                  />
+                </div>
+
+                <h3 className="text-xl font-bold text-white transition-colors duration-300 group-hover:text-cyan-400">
+                  {member.name}
+                </h3>
+                <p className="text-xs font-bold uppercase tracking-wider text-cyan-400 mt-1 mb-3">
+                  {member.role}
+                </p>
+                <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">{member.bio}</p>
               </div>
-
-              <h3 className="text-xl font-bold text-white transition-colors duration-300 group-hover:text-cyan-400">
-                {member.name}
-              </h3>
-              <p className="text-xs font-bold uppercase tracking-wider text-cyan-400 mt-1 mb-3">
-                {member.role}
-              </p>
-              <p className="text-xs text-slate-400 leading-relaxed">{member.bio}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       {/* ──── CLIENT TESTIMONIALS SLIDER ──── */}
@@ -330,7 +374,7 @@ const AboutPage = () => {
             {/* Navigation Controls */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mt-10 pt-6 border-t border-slate-800/80 relative z-10">
               <div className="flex items-center gap-2">
-                {testimonialsData.map((item, idx) => (
+                {testimonials.map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
@@ -346,22 +390,34 @@ const AboutPage = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <button
+                {/* Public review button commented out - admin managed */}
+                {/* <button
                   type="button"
-                  onClick={prevTestimonial}
-                  className="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white hover:bg-blue-600 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-600/20 transition-all cursor-pointer"
-                  aria-label="Previous testimonial"
+                  onClick={() => setIsReviewModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 transition-all cursor-pointer shadow-sm"
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={nextTestimonial}
-                  className="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white hover:bg-blue-600 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-600/20 transition-all cursor-pointer"
-                  aria-label="Next testimonial"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                  <Star className="h-3.5 w-3.5 fill-cyan-400 text-cyan-400" />
+                  <span>Leave a Review</span>
+                </button> */}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={prevTestimonial}
+                    className="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white hover:bg-blue-600 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-600/20 transition-all cursor-pointer"
+                    aria-label="Previous testimonial"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={nextTestimonial}
+                    className="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white hover:bg-blue-600 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-600/20 transition-all cursor-pointer"
+                    aria-label="Next testimonial"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -376,6 +432,12 @@ const AboutPage = () => {
         isOpen={isQuoteModalOpen}
         onClose={() => setIsQuoteModalOpen(false)}
       />
+
+      {/* WriteReviewModal commented out - admin managed */}
+      {/* <WriteReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+      /> */}
 
     </main>
   );

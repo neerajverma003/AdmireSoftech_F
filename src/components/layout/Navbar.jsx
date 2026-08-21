@@ -9,9 +9,14 @@ import {
   X,
   ArrowRight,
   PhoneCall,
+  LogIn,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
 import QuickQuoteModal from '../common/QuickQuoteModal';
 import ContactModal from '../common/ContactModal';
+import AuthModal from '../auth/AuthModal';
+import { useAuth } from '../../context/AuthContext';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -20,6 +25,8 @@ const Navbar = () => {
   const [mobileExpanded, setMobileExpanded] = useState(null);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
+  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
 
   const timeoutRef = useRef(null);
   const location = useLocation();
@@ -288,6 +295,35 @@ const Navbar = () => {
 
           {/* ──── RIGHT ACTIONS: BRAND GRADIENT CTA ──── */}
           <div className="flex items-center gap-3">
+            {/* User Auth Pill / Sign In Button */}
+            {isAuthenticated && user ? (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/40 text-xs font-semibold text-slate-200 shadow-md">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white text-[11px] font-bold">
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span className="text-slate-200 font-medium max-w-[100px] truncate">
+                  {user.name ? user.name.split(' ')[0] : 'User'}
+                </span>
+                <button
+                  type="button"
+                  onClick={logout}
+                  title="Sign Out"
+                  className="p-1 rounded-full text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openAuthModal('login')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-cyan-500/40 bg-[#060b18]/80 hover:bg-cyan-500/10 hover:border-cyan-400 text-xs font-bold text-cyan-300 hover:text-white transition-all duration-200 cursor-pointer shadow-sm"
+              >
+                <LogIn className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Sign In</span>
+              </button>
+            )}
+
             {/* Talk to an engineer button with Project Cyan/Blue Gradient */}
             <button
               type="button"
@@ -445,8 +481,55 @@ const Navbar = () => {
                 );
               })}
 
-              {/* Mobile CTA */}
-              <div className="pt-2">
+              {/* Mobile Auth & CTA */}
+              <div className="pt-2 space-y-2">
+                {isAuthenticated && user ? (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-900/80 border border-slate-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-200">{user.name}</div>
+                        <div className="text-[10px] text-slate-400">{user.email}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        logout();
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        openAuthModal('login');
+                      }}
+                      className="py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-semibold text-center"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        openAuthModal('signup');
+                      }}
+                      className="py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-semibold text-center"
+                    >
+                      Create Account
+                    </button>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
@@ -475,6 +558,9 @@ const Navbar = () => {
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
       />
+
+      {/* ──── USER AUTH MODAL ──── */}
+      <AuthModal />
     </>
   );
 };

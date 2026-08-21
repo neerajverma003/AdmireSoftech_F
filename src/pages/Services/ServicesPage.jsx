@@ -3,18 +3,45 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
   Cloud,
+  Cpu,
+  Code2,
+  ShieldCheck,
+  BarChart3,
+  Palette,
+  Layers,
   Search,
   CheckCircle2,
   ArrowRight,
   Sparkles,
   X,
 } from 'lucide-react';
-import { servicesData } from '../../data/services';
+import { getActiveServices } from '../../api/servicesApi';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
 import WhyChooseUsTestimonials from '../../components/common/WhyChooseUsTestimonials';
 import CtaBanner from '../../components/common/CtaBanner';
 
 const Services3D = lazy(() => import('../../components/3d/Services3D'));
+
+const ICON_MAP = {
+  Cloud,
+  Cpu,
+  Code2,
+  ShieldCheck,
+  BarChart3,
+  Palette,
+  Layers,
+};
+
+const getServiceIcon = (service) => {
+  if (service?.icon && typeof service.icon !== 'string') return service.icon;
+  if (service?.iconName && ICON_MAP[service.iconName]) return ICON_MAP[service.iconName];
+  if (service?.category === 'AI') return Cpu;
+  if (service?.category === 'Development') return Code2;
+  if (service?.category === 'Security') return ShieldCheck;
+  if (service?.category === 'Data') return BarChart3;
+  if (service?.category === 'Design') return Palette;
+  return Cloud;
+};
 
 const DEFAULT_CATEGORIES = ['All', 'Cloud', 'AI', 'Development', 'Security', 'Data', 'Design'];
 
@@ -28,10 +55,36 @@ const TYPEWRITER_SERVICES = [
 ];
 
 const ServicesPage = () => {
+  const [servicesList, setServicesList] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedService, setSelectedService] = useState(null);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch live services from MongoDB
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        const data = await getActiveServices();
+        if (isMounted && Array.isArray(data)) {
+          setServicesList(data);
+        }
+      } catch (err) {
+        console.warn('[ServicesPage] Failed to fetch services from backend:', err.message);
+        if (isMounted) setServicesList([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchServices();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Typewriter animation state
   const [typewriterIndex, setTypewriterIndex] = useState(0);
@@ -66,16 +119,16 @@ const ServicesPage = () => {
     return () => clearTimeout(timer);
   }, [typewriterText, isDeleting, typewriterIndex]);
 
-  // Categories derived from data
+  // Categories derived from live data
   const categories = useMemo(() => {
-    if (!servicesData || servicesData.length === 0) return DEFAULT_CATEGORIES;
-    const unique = Array.from(new Set(servicesData.map((s) => s.category).filter(Boolean)));
+    if (!servicesList || servicesList.length === 0) return DEFAULT_CATEGORIES;
+    const unique = Array.from(new Set(servicesList.map((s) => s.category).filter(Boolean)));
     return unique.length > 0 ? ['All', ...unique] : DEFAULT_CATEGORIES;
-  }, []);
+  }, [servicesList]);
 
-  // Filtered services
+  // Filtered services from live data
   const filteredServices = useMemo(() => {
-    return servicesData.filter((s) => {
+    return servicesList.filter((s) => {
       const matchesCategory =
         activeCategory === 'All' || s.category?.toLowerCase() === activeCategory.toLowerCase();
       const query = searchQuery.toLowerCase().trim();
@@ -86,7 +139,7 @@ const ServicesPage = () => {
       const techMatch = s.techStack?.some((t) => t.toLowerCase().includes(query));
       return matchesCategory && (titleMatch || descMatch || techMatch);
     });
-  }, [activeCategory, searchQuery]);
+  }, [servicesList, activeCategory, searchQuery]);
 
   const handleOpenInquiry = () => {
     setSelectedService(null);
@@ -238,10 +291,11 @@ const ServicesPage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
             {filteredServices.map((service) => {
-              const Icon = service.icon || Cloud;
+              const Icon = getServiceIcon(service);
+              const serviceKey = service.id || service._id || service.title;
               return (
                 <div
-                  key={service.id}
+                  key={serviceKey}
                   onMouseMove={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);

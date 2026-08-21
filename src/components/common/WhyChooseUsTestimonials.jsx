@@ -1,13 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
-import { testimonialsList, competitiveEdgeMetrics } from '../../data/testimonialsData';
+import { ChevronLeft, ChevronRight, ArrowRight, Star, Plus } from 'lucide-react';
+import { competitiveEdgeMetrics } from '../../data/testimonialsData';
+import { getActiveTestimonials } from '../../api/testimonialsApi';
+import WriteReviewModal from './WriteReviewModal';
 
 const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
+  const [testimonials, setTestimonials] = useState([]);
   const [startIndex, setStartIndex] = useState(0);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchReviews = async () => {
+      try {
+        const data = await getActiveTestimonials();
+        if (isMounted && Array.isArray(data)) {
+          setTestimonials(data);
+        }
+      } catch (err) {
+        console.warn('[WhyChooseUsTestimonials] Error fetching reviews from backend:', err.message);
+      }
+    };
+    fetchReviews();
+
+    // Re-fetch every 30 seconds so admin changes reflect live
+    const pollInterval = setInterval(fetchReviews, 30000);
+
+    // Also re-fetch when user tabs back to the page
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchReviews();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const nextTestimonials = () => {
-    if (startIndex + 3 < testimonialsList.length) {
+    if (testimonials.length <= 3) return;
+    if (startIndex + 3 < testimonials.length) {
       setStartIndex((prev) => prev + 1);
     } else {
       setStartIndex(0);
@@ -15,18 +52,21 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
   };
 
   const prevTestimonials = () => {
+    if (testimonials.length <= 3) return;
     if (startIndex > 0) {
       setStartIndex((prev) => prev - 1);
     } else {
-      setStartIndex(Math.max(0, testimonialsList.length - 3));
+      setStartIndex(Math.max(0, testimonials.length - 3));
     }
   };
 
-  const visibleTestimonials = testimonialsList.slice(startIndex, startIndex + 3);
-  // In case there are fewer than 3 at the end, wrap around
+  const visibleTestimonials = testimonials.slice(startIndex, startIndex + 3);
+  // In case there are fewer than 3 at the end, wrap around if there are items
   const displayItems =
-    visibleTestimonials.length < 3
-      ? [...visibleTestimonials, ...testimonialsList.slice(0, 3 - visibleTestimonials.length)]
+    testimonials.length === 0
+      ? []
+      : visibleTestimonials.length < 3 && testimonials.length >= 3
+      ? [...visibleTestimonials, ...testimonials.slice(0, 3 - visibleTestimonials.length)]
       : visibleTestimonials;
 
   return (
@@ -124,71 +164,91 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
           </div>
 
           {/* Carousel Arrows */}
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <button
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            {/* Public review button commented out - admin managed */}
+            {/* <button
               type="button"
-              onClick={prevTestimonials}
-              className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900/80 hover:bg-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
-              aria-label="Previous Testimonials"
+              onClick={() => setIsReviewModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 transition-all cursor-pointer shadow-sm"
             >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={nextTestimonials}
-              className="w-10 h-10 rounded-full border border-slate-800 bg-slate-900/80 hover:bg-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
-              aria-label="Next Testimonials"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+              <Star className="h-3.5 w-3.5 fill-cyan-400 text-cyan-400" />
+              <span>Leave a Review</span>
+            </button> */}
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={prevTestimonials}
+                className="w-9 h-9 rounded-full border border-slate-800 bg-slate-900/80 hover:bg-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
+                aria-label="Previous Testimonials"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={nextTestimonials}
+                className="w-9 h-9 rounded-full border border-slate-800 bg-slate-900/80 hover:bg-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
+                aria-label="Next Testimonials"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Testimonials 3-Card Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-7">
-          <AnimatePresence mode="popLayout">
-            {displayItems.map((item, idx) => (
-              <motion.div
-                key={`${item.id}-${idx}`}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3, delay: idx * 0.08 }}
-                className="group rounded-3xl border border-slate-800/80 bg-slate-900/50 p-6 sm:p-7 hover:border-cyan-500/40 hover:bg-slate-900/85 transition-all duration-300 flex flex-col justify-between shadow-xl backdrop-blur-sm"
-              >
-                <div>
-                  {/* Quote Icon */}
-                  <span className="text-3xl sm:text-4xl font-serif text-slate-500 group-hover:text-cyan-400 transition-colors block mb-3 leading-none select-none">
-                    “
-                  </span>
-                  
-                  {/* Quote Text */}
-                  <p className="text-xs sm:text-sm text-slate-300 font-light leading-relaxed mb-6">
-                    {item.quote}
-                  </p>
-                </div>
-
-                {/* Author Info with Avatar */}
-                <div className="pt-4 border-t border-slate-800/60 flex items-center gap-3">
-                  <img
-                    src={item.avatar}
-                    alt={item.author}
-                    className="w-9 h-9 rounded-full object-cover border border-slate-700/80"
-                    loading="lazy"
-                  />
+        {displayItems.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-7">
+            <AnimatePresence mode="popLayout">
+              {displayItems.map((item, idx) => (
+                <motion.div
+                  key={`${item.id || item._id}-${idx}`}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3, delay: idx * 0.08 }}
+                  className="group rounded-3xl border border-slate-800/80 bg-slate-900/50 p-6 sm:p-7 hover:border-cyan-500/40 hover:bg-slate-900/85 transition-all duration-300 flex flex-col justify-between shadow-xl backdrop-blur-sm"
+                >
                   <div>
-                    <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
-                      {item.author}
-                    </h4>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mt-0.5">
-                      {item.role}
+                    {/* Quote Icon */}
+                    <span className="text-3xl sm:text-4xl font-serif text-slate-500 group-hover:text-cyan-400 transition-colors block mb-3 leading-none select-none">
+                      “
                     </span>
+                    
+                    {/* Quote Text */}
+                    <p className="text-xs sm:text-sm text-slate-300 font-light leading-relaxed mb-6">
+                      {item.content || item.quote}
+                    </p>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+
+                  {/* Author Info with Avatar */}
+                  <div className="pt-4 border-t border-slate-800/60 flex items-center gap-3">
+                    {item.avatar && (
+                      <img
+                        src={item.avatar}
+                        alt={item.author}
+                        className="w-9 h-9 rounded-full object-cover border border-slate-700/80"
+                        loading="lazy"
+                      />
+                    )}
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
+                        {item.author}
+                      </h4>
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mt-0.5">
+                        {item.role}{item.company ? ` — ${item.company}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-slate-800/80 bg-slate-900/30 p-8 text-center text-slate-400 text-xs font-mono">
+            No approved client testimonials published yet. Click "Leave a Review" above to share your feedback!
+          </div>
+        )}
       </section>
 
       {/* ──── SECTION 3: CALLOUT BANNER (METEOROPS STYLE) ──── */}
@@ -214,6 +274,12 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
           </div>
         </div>
       </section>
+
+      {/* Write Review Modal commented out - admin managed */}
+      {/* <WriteReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+      /> */}
 
     </div>
   );

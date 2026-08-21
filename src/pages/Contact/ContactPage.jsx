@@ -7,16 +7,27 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import Toast from '../../components/common/Toast';
+import { useAuth } from '../../context/AuthContext';
 
 const ContactPage = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const { user, isAuthenticated } = useAuth();
+
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [company, setCompany] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Sync with user details if login state changes
+  React.useEffect(() => {
+    if (user) {
+      if (!name) setName(user.name || '');
+      if (!email) setEmail(user.email || '');
+    }
+  }, [user]);
 
   // Toast State
   const [toastMessage, setToastMessage] = useState('');

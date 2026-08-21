@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   MessageSquare,
 } from 'lucide-react';
-import { FAQ_DATA } from '../../data/faqData';
+import { getActiveFaqs } from '../../api/faqsApi';
 import TrustedBrands from '../Home/TrustedBrands';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
 
@@ -27,13 +27,32 @@ const CATEGORIES = [
 ];
 
 const FaqPage = () => {
+  const [faqs, setFaqs] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [openIndex, setOpenIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchKnowledgeBase = async () => {
+      try {
+        const data = await getActiveFaqs();
+        if (isMounted && Array.isArray(data)) {
+          setFaqs(data);
+        }
+      } catch (err) {
+        console.warn('[FaqPage] Error fetching FAQs from backend:', err.message);
+      }
+    };
+    fetchKnowledgeBase();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const filteredFaqs = useMemo(() => {
-    return FAQ_DATA.filter((item) => {
+    return faqs.filter((item) => {
       const matchesCategory =
         activeCategory === 'All' || item.category === activeCategory;
       const query = searchQuery.toLowerCase().trim();
@@ -44,7 +63,7 @@ const FaqPage = () => {
         item.highlights?.some((h) => h.toLowerCase().includes(query));
       return matchesCategory && matchesQuery;
     });
-  }, [activeCategory, searchQuery]);
+  }, [faqs, activeCategory, searchQuery]);
 
   const toggleFaq = (idx) => {
     setOpenIndex(openIndex === idx ? -1 : idx);
@@ -161,7 +180,7 @@ const FaqPage = () => {
                   >
                     <div className="flex items-center gap-3.5">
                       <span className="w-7 h-7 rounded-lg bg-blue-600/15 border border-blue-500/30 text-cyan-400 flex items-center justify-center text-xs font-mono font-bold shrink-0">
-                        {faq.id}
+                        {faq.faqNumber || String(idx + 1).padStart(2, '0')}
                       </span>
                       <h3 className="text-sm sm:text-base font-bold text-white leading-snug">
                         {faq.question}

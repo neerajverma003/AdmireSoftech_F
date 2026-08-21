@@ -13,17 +13,24 @@ import TechnologiesPage from './pages/Technologies/TechnologiesPage';
 import IndustriesPage from './pages/Industries/IndustriesPage';
 import FaqPage from './pages/Faq/FaqPage';
 import AboutPage from './pages/About/AboutPage';
+import AuthPage from './pages/Auth/AuthPage';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-[#070C1E] text-slate-100 selection:bg-cyan-500 selection:text-white">
-        {/* Fixed Sticky Header Navbar */}
-        <Navbar />
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-[#070C1E] text-slate-100 selection:bg-cyan-500 selection:text-white">
+          {/* Fixed Sticky Header Navbar */}
+          <Navbar />
 
         {/* Page Routes */}
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<AuthPage initialMode="login" />} />
+          <Route path="/signin" element={<AuthPage initialMode="login" />} />
+          <Route path="/signup" element={<AuthPage initialMode="signup" />} />
+          <Route path="/register" element={<AuthPage initialMode="signup" />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/solutions" element={<SolutionsPage />} />
           <Route path="/solution" element={<SolutionsPage />} />
@@ -49,6 +56,7 @@ function App() {
         <Footer />
       </div>
     </Router>
+    </AuthProvider>
   );
 }
 
