@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,14 +18,36 @@ import {
   UploadCloud,
   FileText,
   Trash2,
+  Filter,
 } from 'lucide-react';
-import { freelanceProjectsData } from '../../data/freelanceData';
+import { getActiveFreelanceGigs, submitFreelanceProposal } from '../../api/freelanceApi';
+import { uploadFileToS3 } from '../../api/uploadApi';
+import { useAuth } from '../../context/AuthContext';
 import Toast from '../../components/common/Toast';
 import TrustedBrands from '../Home/TrustedBrands';
 
+const CATEGORIES = [
+  'All',
+  'Development',
+  'Full-Stack',
+  'Cloud',
+  'DevOps',
+  'AI & ML',
+  'Data Engineering',
+  'Cybersecurity',
+  'UI/UX Design',
+];
+
 const FreelancePage = () => {
+  const { user, isAuthenticated, openAuthModal } = useAuth();
+
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('All');
+
   const [selectedProject, setSelectedProject] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
   // Form State
@@ -39,13 +61,45 @@ const FreelancePage = () => {
   const [resumeFile, setResumeFile] = useState(null);
   const [resumeFileName, setResumeFileName] = useState('');
   const [resumeError, setResumeError] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = React.useRef(null);
 
   // Toast
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+
+  const fetchGigs = async () => {
+    try {
+      const data = await getActiveFreelanceGigs(activeCategory);
+      if (Array.isArray(data)) {
+        setProjects(data);
+      }
+    } catch (err) {
+      console.warn('[FreelancePage] Error loading freelance gigs:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGigs();
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchGigs, 30000);
+
+    // Re-fetch on tab focus
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchGigs();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [activeCategory]);
 
   const handleFileSelect = (file) => {
     if (!file) return;
@@ -57,8 +111,8 @@ const FreelancePage = () => {
       setResumeError('Please upload a PDF, DOC, or DOCX file.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setResumeError('File size exceeds 10MB limit.');
+    if (file.size > 15 * 1024 * 1024) {
+      setResumeError('File size exceeds 15MB limit.');
       return;
     }
 
@@ -80,21 +134,70 @@ const FreelancePage = () => {
     }
   };
 
+  const handleOpenApplyModal = (project) => {
+    if (!isAuthenticated) {
+      setToastMessage('Authentication required: Please sign in or create an account to apply for freelance projects.');
+      setToastType('info');
+      openAuthModal('signup');
+      return;
+    }
+    setSelectedProject(project);
+    setFullName(user?.name || '');
+    setEmail(user?.email || '');
+  };
+
   const handleApplySubmit = async (e) => {
     e.preventDefault();
-    if (!email || !fullName) return;
+    if (!isAuthenticated) {
+      setToastMessage('Please sign in or create an account to apply.');
+      setToastType('error');
+      openAuthModal('signup');
+      return;
+    }
+
+    if (!email?.trim() || !fullName?.trim() || !selectedProject) return;
 
     setSubmitting(true);
     setIsSuccess(false);
 
-    // Simulate fast submission
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      let uploadedResumeUrl = '';
+      let uploadedResumeKey = '';
+
+      // 1. Direct S3 Upload if resume attached
+      if (resumeFile) {
+        setUploadProgressText('Uploading Resume directly to S3 bucket...');
+        const s3Result = await uploadFileToS3(resumeFile, 'resumes');
+        uploadedResumeUrl = s3Result.publicUrl;
+        uploadedResumeKey = s3Result.key;
+      }
+
+      setUploadProgressText('Submitting contractor application...');
+
+      // 2. Submit proposal payload to backend
+      const proposalPayload = {
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        hourlyRate: hourlyRate.trim() || selectedProject.rate,
+        availability,
+        portfolioUrl: portfolioUrl.trim(),
+        experienceNote: experienceNote.trim(),
+        resumeUrl: uploadedResumeUrl,
+        resumeFileName: resumeFileName,
+        resumeKey: uploadedResumeKey,
+      };
+
+      await submitFreelanceProposal(selectedProject.id || selectedProject._id, proposalPayload);
+
       setIsSuccess(true);
       setToastMessage(
-        `Application submitted successfully for ${selectedProject?.title || 'the freelance project'}! Our team will reach out within 24 hours.`
+        `Application submitted successfully for ${selectedProject.title}! Our team will review your proposal.`
       );
       setToastType('success');
+
+      // Refresh list to update bid count
+      fetchGigs();
 
       setTimeout(() => {
         setSelectedProject(null);
@@ -108,8 +211,15 @@ const FreelancePage = () => {
         setResumeFile(null);
         setResumeFileName('');
         setIsSuccess(false);
-      }, 1600);
-    }, 800);
+        setUploadProgressText('');
+      }, 1800);
+    } catch (err) {
+      console.error('[FreelancePage] Submit proposal failed:', err);
+      setToastMessage(err.message || 'Failed to submit proposal. Please try again.');
+      setToastType('error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleScrollToProjects = () => {
@@ -127,60 +237,96 @@ const FreelancePage = () => {
       <div className="pointer-events-none absolute top-1/4 right-0 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full" />
       <div className="pointer-events-none absolute top-1/3 left-0 w-[400px] h-[400px] bg-cyan-500/10 blur-[100px] rounded-full" />
 
-      {/* ──── HERO SECTION (2-COLUMN METEOROPS LAYOUT) ──── */}
+      {/* ──── HERO SECTION (2-COLUMN LAYOUT) ──── */}
       <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-start">
           
           {/* LEFT COLUMN: Open Positions List */}
           <div id="freelance-list" className="lg:col-span-6 space-y-4">
-            <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span>THERE ARE CURRENTLY {freelanceProjectsData.length} OPEN POSITIONS.</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+              <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-slate-400 font-semibold flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <span>THERE ARE CURRENTLY {projects.length} OPEN POSITIONS.</span>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {freelanceProjectsData.map((project) => (
-                <div
-                  key={project.id}
-                  className="group rounded-2xl border border-slate-800/80 bg-slate-900/60 p-4 sm:p-5 hover:border-cyan-500/40 hover:bg-slate-900/90 transition-all duration-200 shadow-md flex items-center justify-between gap-4"
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap gap-1.5 pb-2">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`text-[11px] font-semibold px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    activeCategory === cat
+                      ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
                 >
-                  <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
-                    {/* Number Badge */}
-                    <div className="w-8 h-8 rounded-lg bg-slate-800/70 border border-slate-700/60 flex items-center justify-center text-xs font-mono font-bold text-slate-400 group-hover:text-cyan-400 group-hover:border-cyan-500/40 shrink-0 transition-colors">
-                      {project.num}
-                    </div>
-
-                    <div className="min-w-0">
-                      <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
-                        {project.title}
-                      </h3>
-                      <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-slate-400 font-mono tracking-wider mt-0.5">
-                        <span>{project.type}</span>
-                        <span className="text-slate-600">•</span>
-                        <span className="text-cyan-400 font-semibold">{project.rate}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Apply Button */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProject(project)}
-                    className="shrink-0 text-xs font-semibold text-slate-400 group-hover:text-cyan-400 hover:text-white transition-colors flex items-center gap-1 cursor-pointer py-1 px-2.5 rounded-lg hover:bg-white/5"
-                  >
-                    <span>APPLY</span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </button>
-                </div>
+                  {cat}
+                </button>
               ))}
             </div>
+
+            {/* Project List */}
+            {loading ? (
+              <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2">
+                <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                <span>Loading open freelance projects...</span>
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="p-8 rounded-2xl border border-slate-800 bg-slate-900/40 text-center space-y-2">
+                <Briefcase className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="font-semibold text-slate-300">No open positions found in this category.</p>
+                <p className="text-xs text-slate-500">Check back soon or select "All" to view other available contracts.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {projects.map((project, idx) => (
+                  <div
+                    key={project.id || project._id}
+                    className="group rounded-2xl border border-slate-800/80 bg-slate-900/60 p-4 sm:p-5 hover:border-cyan-500/40 hover:bg-slate-900/90 transition-all duration-200 shadow-md flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                      {/* Number Badge */}
+                      <div className="w-8 h-8 rounded-lg bg-slate-800/70 border border-slate-700/60 flex items-center justify-center text-xs font-mono font-bold text-slate-400 group-hover:text-cyan-400 group-hover:border-cyan-500/40 shrink-0 transition-colors">
+                        {String(idx + 1).padStart(2, '0')}
+                      </div>
+
+                      <div className="min-w-0">
+                        <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
+                          {project.title}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-[11px] text-slate-400 font-mono tracking-wider mt-0.5">
+                          <span>{project.type}</span>
+                          <span className="text-slate-600">•</span>
+                          <span className="text-cyan-400 font-semibold">{project.rate}</span>
+                          {project.bidsCount > 0 && (
+                            <>
+                              <span className="text-slate-600">•</span>
+                              <span className="text-purple-300">{project.bidsCount} Bids</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Apply Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenApplyModal(project)}
+                      className="shrink-0 text-xs font-semibold text-slate-400 group-hover:text-cyan-400 hover:text-white transition-colors flex items-center gap-1 cursor-pointer py-1.5 px-3 rounded-xl bg-white/5 hover:bg-cyan-500/10 border border-slate-800 hover:border-cyan-500/30"
+                    >
+                      <span>APPLY</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* RIGHT COLUMN: Big Title, Pitch & CTAs */}
           <div className="lg:col-span-6 lg:pl-4 space-y-6 lg:sticky lg:top-32">
-            {/* Breadcrumb / Tag */}
-            
-
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
               Freelance{' '}
@@ -249,8 +395,8 @@ const FreelancePage = () => {
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-white">Direct Client Access</div>
-                  <div className="text-[11px] text-slate-400">Zero middleman bureaucracy</div>
+                  <div className="text-xs font-semibold text-white">Verified Clients</div>
+                  <div className="text-[11px] text-slate-400">Escrow-backed contracts</div>
                 </div>
               </div>
             </div>
@@ -259,21 +405,29 @@ const FreelancePage = () => {
         </div>
       </section>
 
-      {/* ──── TRUSTED BRANDS RUNNING BANNER ──── */}
-      <TrustedBrands />
+      {/* ──── TRUSTED ENTERPRISES ──── */}
+      <section className="relative z-10 border-t border-slate-800/80 pt-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center mb-6">
+          <span className="text-xs font-mono uppercase tracking-[0.25em] text-slate-400">
+            Work With Leading Enterprise Brands
+          </span>
+        </div>
+        <TrustedBrands />
+      </section>
 
-      {/* ──── INTERACTIVE FREELANCE APPLICATION MODAL ──── */}
+      {/* ──── APPLICATION MODAL (PORTAL) ──── */}
       {selectedProject &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-scrollbar">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
             {/* Backdrop */}
             <div
-              className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
               onClick={() => setSelectedProject(null)}
+              className="fixed inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity"
             />
 
-            {/* Modal Card */}
-            <div className="relative w-full max-w-2xl my-auto rounded-3xl border border-slate-700/80 bg-slate-900/95 p-5 sm:p-7 shadow-2xl z-10 overflow-y-auto max-h-[96vh] no-scrollbar">
+            {/* Modal Box */}
+            <div className="relative w-full max-w-2xl rounded-3xl border border-slate-700/80 bg-[#0B132B] p-6 sm:p-8 shadow-2xl shadow-cyan-500/10 z-10 my-auto text-left">
+              {/* Close button */}
               <button
                 type="button"
                 onClick={() => setSelectedProject(null)}
@@ -288,19 +442,19 @@ const FreelancePage = () => {
                     Freelance Contract Application
                   </span>
                   <span className="rounded-md bg-blue-600/20 text-cyan-300 border border-blue-600/30 px-2 py-0.5 text-[10px] font-mono">
-                    {selectedProject.num}
+                    {selectedProject.category}
                   </span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-white">{selectedProject.title}</h2>
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
-                  <span>Rate: <strong className="text-emerald-400">{selectedProject.rate}</strong></span>
+                  <span>Budget: <strong className="text-emerald-400">{selectedProject.rate}</strong></span>
                   <span>•</span>
                   <span>Duration: {selectedProject.duration}</span>
                 </div>
               </div>
 
               {/* Skills required */}
-              {selectedProject.skills && (
+              {selectedProject.skills && selectedProject.skills.length > 0 && (
                 <div className="mb-5 flex flex-wrap gap-1.5">
                   {selectedProject.skills.map((s) => (
                     <span
@@ -347,7 +501,7 @@ const FreelancePage = () => {
                       type="text"
                       value={hourlyRate}
                       onChange={(e) => setHourlyRate(e.target.value)}
-                      placeholder="e.g. $75/hr"
+                      placeholder="e.g. $85/hr"
                       className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
@@ -367,7 +521,7 @@ const FreelancePage = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Phone / Telegram</label>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Phone / WhatsApp</label>
                     <input
                       type="tel"
                       value={phone}
@@ -388,11 +542,11 @@ const FreelancePage = () => {
                   </div>
                 </div>
 
-                {/* ──── RESUME / CV UPLOAD OPTION ──── */}
+                {/* ──── DIRECT AWS S3 RESUME UPLOAD ──── */}
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
                     <span>Resume / CV (PDF, DOC, DOCX)</span>
-                    <span className="text-[11px] text-slate-500 font-mono">Max 10MB</span>
+                    <span className="text-[11px] text-cyan-400 font-mono"></span>
                   </label>
 
                   <input
@@ -414,7 +568,7 @@ const FreelancePage = () => {
                             {resumeFileName}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono">
-                            {(resumeFile.size / (1024 * 1024)).toFixed(2)} MB · Attached
+                            {(resumeFile.size / (1024 * 1024)).toFixed(2)} MB · Ready for direct S3 upload
                           </div>
                         </div>
                       </div>
@@ -437,8 +591,8 @@ const FreelancePage = () => {
                         <UploadCloud className="w-4 h-4" />
                       </div>
                       <div className="text-xs">
-                        <span className="font-semibold text-cyan-400 underline underline-offset-2">Click to browse</span>
-                        <span className="text-slate-400"> or attach your resume / CV</span>
+                        <span className="font-semibold text-cyan-400 underline underline-offset-2">Click to attach resume</span>
+                        <span className="text-slate-400"> (PDF, DOCX up to 15MB)</span>
                       </div>
                     </div>
                   )}
@@ -458,6 +612,13 @@ const FreelancePage = () => {
                     className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none resize-none no-scrollbar"
                   />
                 </div>
+
+                {uploadProgressText && (
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>{uploadProgressText}</span>
+                  </div>
+                )}
 
                 <div className="pt-3 flex justify-end gap-3 border-t border-slate-800/80">
                   <button
@@ -489,7 +650,7 @@ const FreelancePage = () => {
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        <span>Apply For Project</span>
+                        <span>Submit Proposal</span>
                       </>
                     )}
                   </button>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getJobPositions, submitJobApplication } from '../../api/careersApi';
+import { uploadFileToS3 } from '../../api/uploadApi';
+import { useAuth } from '../../context/AuthContext';
 import {
   Briefcase,
   MapPin,
@@ -14,22 +16,28 @@ import {
   UploadCloud,
   FileText,
   Trash2,
-  Paperclip,
+  DollarSign,
+  Building,
 } from 'lucide-react';
 import Toast from '../../components/common/Toast';
 
 const CareerPage = () => {
+  const { user, isAuthenticated, openAuthModal } = useAuth();
+
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState('All');
   const [activeJob, setActiveJob] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
   // Form State
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [experience, setExperience] = useState('');
+  const [currentCompany, setCurrentCompany] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [coverNote, setCoverNote] = useState('');
   const [resumeFile, setResumeFile] = useState(null);
@@ -46,12 +54,13 @@ const CareerPage = () => {
   const departments = ['All', 'Engineering', 'Artificial Intelligence', 'Infrastructure', 'Design'];
 
   const fetchJobs = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await getJobPositions(selectedDepartment);
-      setJobs(data);
+      if (Array.isArray(data)) {
+        setJobs(data);
+      }
     } catch (err) {
-      console.error('Error fetching jobs:', err);
+      console.warn('[CareerPage] Error fetching jobs:', err.message);
     } finally {
       setLoading(false);
     }
@@ -59,7 +68,46 @@ const CareerPage = () => {
 
   useEffect(() => {
     fetchJobs();
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchJobs, 30000);
+
+    // Re-fetch on tab focus
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchJobs();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchJobs]);
+
+  const handleOpenApplyModal = (job) => {
+    if (!isAuthenticated) {
+      setToastMessage('Authentication required: Please sign in or create an account to apply for career positions.');
+      setToastType('info');
+      openAuthModal('signup');
+      return;
+    }
+
+    setActiveJob(job);
+    setFullName(user?.name || '');
+    setEmail(user?.email || '');
+    setPhone('');
+    setExperience('');
+    setCurrentCompany('');
+    setPortfolioUrl('');
+    setCoverNote('');
+    setResumeFile(null);
+    setResumeFileName('');
+    setResumeError('');
+    setIsSuccess(false);
+    setUploadProgressText('');
+  };
 
   const handleFileSelect = (file) => {
     if (!file) return;
@@ -74,9 +122,9 @@ const CareerPage = () => {
       return;
     }
 
-    // Size limit: 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      setResumeError('File size exceeds 10MB limit.');
+    // Size limit: 15MB
+    if (file.size > 15 * 1024 * 1024) {
+      setResumeError('File size exceeds 15MB limit.');
       return;
     }
 
@@ -117,77 +165,106 @@ const CareerPage = () => {
 
   const handleApplySubmit = async (e) => {
     e.preventDefault();
-    if (!email || !fullName) return;
+    if (!isAuthenticated) {
+      setToastMessage('Please sign in or create an account to apply.');
+      setToastType('error');
+      openAuthModal('signup');
+      return;
+    }
+
+    if (!email?.trim() || !fullName?.trim() || !activeJob) return;
 
     setSubmitting(true);
     setIsSuccess(false);
-    try {
-      const res = await submitJobApplication({
-        jobId: activeJob?.id,
-        jobTitle: activeJob?.title,
-        fullName,
-        email,
-        phone,
-        portfolioUrl,
-        coverNote,
-        resumeFile,
-        resumeFileName,
-      });
 
-      setSubmitting(false);
+    try {
+      let uploadedResumeUrl = '';
+      let uploadedResumeKey = '';
+
+      // 1. Direct S3 Upload if resume attached
+      if (resumeFile) {
+        setUploadProgressText('Uploading Resume directly to S3 bucket...');
+        const s3Result = await uploadFileToS3(resumeFile, 'job-resumes');
+        uploadedResumeUrl = s3Result.publicUrl;
+        uploadedResumeKey = s3Result.key;
+      }
+
+      setUploadProgressText('Submitting candidate application...');
+
+      // 2. Submit application payload to backend
+      const applicationPayload = {
+        jobId: activeJob.id || activeJob._id,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        experience: experience.trim(),
+        currentCompany: currentCompany.trim(),
+        portfolioUrl: portfolioUrl.trim(),
+        coverNote: coverNote.trim(),
+        resumeUrl: uploadedResumeUrl,
+        resumeFileName: resumeFileName,
+        resumeKey: uploadedResumeKey,
+      };
+
+      const res = await submitJobApplication(activeJob.id || activeJob._id, applicationPayload);
+
       setIsSuccess(true);
-      setToastMessage(res.message);
+      setToastMessage(res?.message || `Application submitted successfully for "${activeJob.title}"!`);
       setToastType('success');
+
+      // Refresh list to update applicants count
+      fetchJobs();
 
       setTimeout(() => {
         setActiveJob(null);
-        // Reset form
-        setFullName('');
-        setEmail('');
-        setPhone('');
-        setPortfolioUrl('');
-        setCoverNote('');
-        setResumeFile(null);
-        setResumeFileName('');
         setIsSuccess(false);
-      }, 1500);
-    } catch {
-      setSubmitting(false);
-      setToastMessage('Error submitting application. Please try again.');
+        setUploadProgressText('');
+      }, 1800);
+    } catch (err) {
+      console.error('[CareerPage] Submit application failed:', err);
+      setToastMessage(err.message || 'Failed to submit application. Please try again.');
       setToastType('error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <main className="relative min-h-screen w-full max-w-full overflow-hidden bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-20">
+    <main className="relative min-h-screen w-full overflow-hidden bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16">
       <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
 
-      {/* Header */}
-      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-16 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-6">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Join Admire Softech</span>
+      {/* Ambient lighting */}
+      <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-600/10 blur-[130px] rounded-full" />
+      <div className="pointer-events-none absolute top-1/3 right-0 w-[450px] h-[450px] bg-cyan-500/10 blur-[110px] rounded-full" />
+
+      {/* ──── HERO SECTION ──── */}
+      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center mb-16">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-6">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>JOIN OUR ENGINEERING TEAM</span>
         </div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl mb-6">
-          Build the Future of{' '}
+
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.15]">
+          Build The Future Of{' '}
           <span className="bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-            Enterprise Software
+            Enterprise Cloud & AI
           </span>
         </h1>
-        <p className="max-w-2xl mx-auto text-base text-slate-300 sm:text-lg leading-relaxed">
-          Work on cutting-edge AI engines, multi-cloud platforms, and global SaaS products with a world-class team of remote-first engineers.
+
+        <p className="mt-6 text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-light leading-relaxed">
+          Join an agile team of world-class engineers, designers, and AI specialists building high-impact platforms for global enterprises.
         </p>
 
         {/* Department Filters */}
-        <div className="mt-10 flex flex-wrap justify-center gap-2">
+        <div className="mt-10 flex flex-wrap justify-center gap-2 sm:gap-3">
           {departments.map((dept) => (
             <button
               key={dept}
               onClick={() => setSelectedDepartment(dept)}
-              className={`rounded-full px-5 py-2 text-xs font-medium transition-all cursor-pointer ${
+              className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
                 selectedDepartment === dept
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-600/30 font-semibold'
-                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-600/30 scale-105'
+                  : 'bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
               }`}
             >
               {dept}
@@ -196,89 +273,162 @@ const CareerPage = () => {
         </div>
       </section>
 
-      {/* Job Positions List */}
+      {/* ──── JOB POSITIONS LIST ──── */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+          <div className="py-20 text-center flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-slate-400">Loading career openings...</span>
           </div>
         ) : jobs.length === 0 ? (
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-12 text-center text-slate-400">
-            No open positions found for this department currently.
+          <div className="py-20 text-center rounded-3xl border border-slate-800 bg-slate-900/40 p-8">
+            <Briefcase className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-slate-200">No open positions found</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              We don't have openings matching "{selectedDepartment}" right now. Check back soon or select "All" to view other departments.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
             {jobs.map((job) => (
               <div
-                key={job.id}
-                className="group relative overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/70 p-6 sm:p-7 transition-all duration-300 hover:border-cyan-500/40 hover:bg-slate-900/95 hover:shadow-xl hover:shadow-blue-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-6"
+                key={job.id || job._id}
+                className="group relative rounded-3xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8 hover:border-cyan-500/40 hover:bg-slate-900/90 transition-all duration-300 shadow-xl"
               >
-                <div className="space-y-2 flex-1">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="rounded-full bg-blue-600/20 text-cyan-400 border border-blue-600/30 px-3 py-0.5 text-[11px] font-semibold uppercase tracking-wider">
-                      {job.department}
-                    </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5 text-slate-500" />
-                      {job.location}
-                    </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5 text-slate-500" />
-                      {job.type}
-                    </span>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-lg bg-blue-600/20 text-cyan-300 border border-blue-600/30 px-2.5 py-0.5 text-xs font-mono font-semibold">
+                        {job.department}
+                      </span>
+                      <span className="rounded-lg bg-slate-800 text-slate-300 px-2.5 py-0.5 text-xs font-mono">
+                        {job.type}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl sm:text-2xl font-bold text-white group-hover:text-cyan-300 transition-colors">
+                      {job.title}
+                    </h3>
+
+                    <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+                      {job.description}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-1 font-mono">
+                      <div className="flex items-center gap-1.5 text-slate-300">
+                        <MapPin className="h-3.5 w-3.5 text-cyan-400" />
+                        <span>{job.location}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-300">
+                        <Clock className="h-3.5 w-3.5 text-cyan-400" />
+                        <span>{job.experience}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                        <DollarSign className="h-3.5 w-3.5" />
+                        <span>{job.salary}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <h3 className="text-xl font-bold text-white group-hover:text-cyan-300 transition-colors mb-2">
-                    {job.title}
-                  </h3>
-                  <p className="text-xs text-slate-300 sm:text-sm max-w-2xl leading-relaxed mb-4">
-                    {job.description}
-                  </p>
-
-                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-400 font-medium">
-                    <div>Exp: <span className="text-slate-200">{job.experience}</span></div>
-                    <div>Compensation: <span className="text-emerald-400 font-semibold">{job.salary}</span></div>
+                  <div className="shrink-0 flex items-center md:self-center">
+                    <button
+                      onClick={() => handleOpenApplyModal(job)}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <span>Apply Now</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
 
-                <div className="shrink-0">
-                  <button
-                    onClick={() => setActiveJob(job)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 hover:opacity-95 transition-all cursor-pointer"
-                  >
-                    <span>Apply Now</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
+                {/* Key Responsibilities & Requirements Sections */}
+                {((job.responsibilities && job.responsibilities.length > 0) || (job.requirements && job.requirements.length > 0)) && (
+                  <div className="mt-5 pt-5 border-t border-slate-800/80 space-y-3.5">
+                    {/* Responsibilities */}
+                    {job.responsibilities && job.responsibilities.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="text-[11px] uppercase tracking-wider font-bold text-slate-400 font-mono">
+                          Key Responsibilities:
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300">
+                          {job.responsibilities.map((resp, idx) => (
+                            <div key={idx} className="flex items-start gap-2">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                              <span>{resp}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Requirements / Skills */}
+                    {job.requirements && job.requirements.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="text-[11px] uppercase tracking-wider font-bold text-slate-400 font-mono">
+                          Skills & Requirements:
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {job.requirements.map((req, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800/80 text-cyan-200 border border-slate-700/60 font-medium"
+                            >
+                              {req}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </section>
 
-      {/* Application Drawer / Modal */}
+      {/* ──── APPLICATION MODAL (PORTAL) ──── */}
       {activeJob &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-scrollbar">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            {/* Backdrop */}
             <div
-              className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
               onClick={() => setActiveJob(null)}
+              className="fixed inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity"
             />
-            <div className="relative w-full max-w-2xl my-auto rounded-3xl border border-slate-700/80 bg-slate-900/95 p-5 sm:p-7 shadow-2xl z-10 overflow-y-auto max-h-[96vh] no-scrollbar">
+
+            {/* Modal Box */}
+            <div className="relative w-full max-w-2xl rounded-3xl border border-slate-700/80 bg-[#0B132B] p-6 sm:p-8 shadow-2xl shadow-cyan-500/10 z-10 my-auto text-left">
+              {/* Close button */}
               <button
+                type="button"
                 onClick={() => setActiveJob(null)}
-                className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
 
-              <div className="mb-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400">Application</span>
-                <h2 className="text-xl sm:text-2xl font-bold text-white mt-0.5">{activeJob.title}</h2>
-                <p className="text-xs text-slate-400 mt-0.5">{activeJob.department} · {activeJob.location}</p>
+              <div className="mb-5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+                    Full-Time Career Application
+                  </span>
+                  <span className="rounded-md bg-blue-600/20 text-cyan-300 border border-blue-600/30 px-2 py-0.5 text-[10px] font-mono">
+                    {activeJob.department}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white">{activeJob.title}</h2>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1 font-mono">
+                  <span>{activeJob.location}</span>
+                  <span>•</span>
+                  <span>{activeJob.type}</span>
+                  <span>•</span>
+                  <span className="text-emerald-400 font-semibold">{activeJob.salary}</span>
+                </div>
               </div>
 
-              <form onSubmit={handleApplySubmit} className="space-y-3 sm:space-y-3.5">
+              {/* Form */}
+              <form onSubmit={handleApplySubmit} className="space-y-3.5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-medium text-slate-300 mb-1">Full Name *</label>
@@ -287,7 +437,7 @@ const CareerPage = () => {
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="John Doe"
+                      placeholder="Alex Mercer"
                       className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
@@ -298,7 +448,7 @@ const CareerPage = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="john@example.com"
+                      placeholder="alex@company.com"
                       className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
@@ -306,12 +456,35 @@ const CareerPage = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Phone Number</label>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Phone / WhatsApp</label>
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+1 (555) 000-0000"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Years of Experience</label>
+                    <input
+                      type="text"
+                      value={experience}
+                      onChange={(e) => setExperience(e.target.value)}
+                      placeholder="e.g. 4.5 Years"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Current Company / Position</label>
+                    <input
+                      type="text"
+                      value={currentCompany}
+                      onChange={(e) => setCurrentCompany(e.target.value)}
+                      placeholder="TechCorp / Senior Developer"
                       className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
@@ -327,14 +500,13 @@ const CareerPage = () => {
                   </div>
                 </div>
 
-                {/* ──── RESUME / CV UPLOAD OPTION ──── */}
+                {/* ──── DIRECT AWS S3 RESUME UPLOAD ──── */}
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
                     <span>Resume / CV (PDF, DOC, DOCX)</span>
-                    <span className="text-[11px] text-slate-500 font-mono">Max 10MB</span>
+                    <span className="text-[11px] text-cyan-400 font-mono"></span>
                   </label>
 
-                  {/* Hidden actual file input for backend connectivity */}
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -344,7 +516,6 @@ const CareerPage = () => {
                   />
 
                   {resumeFile ? (
-                    /* Selected File View */
                     <div className="flex items-center justify-between p-3 rounded-xl border border-cyan-500/40 bg-cyan-950/30 text-slate-200">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="p-2 rounded-lg bg-cyan-500/20 text-cyan-400 shrink-0">
@@ -355,7 +526,7 @@ const CareerPage = () => {
                             {resumeFileName}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono">
-                            {(resumeFile.size / (1024 * 1024)).toFixed(2)} MB · Ready to submit
+                            {(resumeFile.size / (1024 * 1024)).toFixed(2)} MB · Ready for direct S3 upload
                           </div>
                         </div>
                       </div>
@@ -370,24 +541,23 @@ const CareerPage = () => {
                       </button>
                     </div>
                   ) : (
-                    /* Dropzone / Upload Trigger Box */
                     <div
+                      onClick={() => fileInputRef.current?.click()}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`flex flex-col sm:flex-row items-center justify-center gap-2.5 p-3.5 rounded-xl border border-dashed transition-all cursor-pointer text-center sm:text-left ${
+                      className={`flex flex-col sm:flex-row items-center justify-center gap-2.5 p-3.5 rounded-xl border border-dashed text-slate-400 hover:text-slate-300 transition-all cursor-pointer text-center sm:text-left ${
                         isDragging
-                          ? 'border-cyan-400 bg-cyan-950/40 text-cyan-300'
-                          : 'border-slate-700 bg-slate-950/60 hover:border-cyan-500/50 hover:bg-slate-900/80 text-slate-400 hover:text-slate-300'
+                          ? 'border-cyan-400 bg-cyan-950/40'
+                          : 'border-slate-700 bg-slate-950/60 hover:border-cyan-500/50 hover:bg-slate-900/80'
                       }`}
                     >
                       <div className="p-2 rounded-lg bg-slate-800 text-cyan-400 shrink-0">
                         <UploadCloud className="w-4 h-4" />
                       </div>
                       <div className="text-xs">
-                        <span className="font-semibold text-cyan-400 underline underline-offset-2">Click to browse</span>
-                        <span className="text-slate-400"> or drag and drop your resume file</span>
+                        <span className="font-semibold text-cyan-400 underline underline-offset-2">Click to attach resume</span>
+                        <span className="text-slate-400"> (PDF, DOCX up to 15MB)</span>
                       </div>
                     </div>
                   )}
@@ -398,28 +568,35 @@ const CareerPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Cover Note / Key Highlights</label>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Brief Cover Note / Highlights</label>
                   <textarea
                     rows={2}
                     value={coverNote}
                     onChange={(e) => setCoverNote(e.target.value)}
-                    placeholder="Tell us about your relevant projects and why you'd be a great fit..."
+                    placeholder="Tell us why you're a great fit for this role..."
                     className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none resize-none no-scrollbar"
                   />
                 </div>
 
-                <div className="pt-2 flex justify-end gap-3">
+                {uploadProgressText && (
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>{uploadProgressText}</span>
+                  </div>
+                )}
+
+                <div className="pt-3 flex justify-end gap-3 border-t border-slate-800/80">
                   <button
                     type="button"
                     onClick={() => setActiveJob(null)}
-                    className="px-5 py-3 rounded-xl border border-slate-700 text-xs font-medium text-slate-300 hover:bg-white/5 cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl border border-slate-700 text-xs font-medium text-slate-300 hover:bg-white/5 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting || isSuccess}
-                    className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 text-xs font-bold text-white shadow-lg transition-all duration-300 cursor-pointer ${
+                    className={`inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-xs font-bold text-white shadow-lg transition-all duration-300 cursor-pointer ${
                       isSuccess
                         ? 'bg-emerald-600 shadow-emerald-500/30 scale-[1.02]'
                         : 'bg-gradient-to-r from-blue-600 to-cyan-500 shadow-blue-600/30 hover:opacity-95 active:scale-[0.98]'
@@ -428,12 +605,12 @@ const CareerPage = () => {
                     {submitting ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin text-cyan-200" />
-                        <span>Submitting...</span>
+                        <span>Submitting Application...</span>
                       </>
                     ) : isSuccess ? (
                       <>
                         <CheckCircle2 className="h-4 w-4 text-emerald-200 animate-bounce" />
-                        <span>Application Sent!</span>
+                        <span>Application Received!</span>
                       </>
                     ) : (
                       <>

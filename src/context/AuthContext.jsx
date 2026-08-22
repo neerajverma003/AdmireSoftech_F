@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiRequest } from '../api/client';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { apiRequest, refreshAccessToken, getTokenExpiry } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -14,10 +14,11 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!localStorage.getItem('admire_user_token');
+    return !!(localStorage.getItem('admire_user_token') || localStorage.getItem('admire_user_refresh_token'));
   });
 
   const [isLoading, setIsLoading] = useState(true);
+  const refreshTimerRef = useRef(null);
 
   // Auth modal management state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -32,55 +33,152 @@ export const AuthProvider = ({ children }) => {
     setIsAuthModalOpen(false);
   };
 
+  /**
+   * Schedule automatic silent token refresh 2 minutes before access token expires
+   */
+  const scheduleSilentRefresh = useCallback((token) => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+
+    if (!token) return;
+
+    const expiryMs = getTokenExpiry(token);
+    const now = Date.now();
+    const delay = expiryMs > now ? Math.max(expiryMs - now - 120000, 10000) : 10000;
+
+    refreshTimerRef.current = setTimeout(async () => {
+      try {
+        const storedRefreshToken = localStorage.getItem('admire_user_refresh_token');
+        if (!storedRefreshToken) return;
+
+        const refreshData = await refreshAccessToken();
+        if (refreshData && refreshData.accessToken) {
+          if (refreshData.user) {
+            setUser(refreshData.user);
+            localStorage.setItem('admire_user_data', JSON.stringify(refreshData.user));
+          }
+          setIsAuthenticated(true);
+          scheduleSilentRefresh(refreshData.accessToken);
+        }
+      } catch (err) {
+        console.warn('[Client Auth] Background silent refresh failed:', err.message);
+      }
+    }, delay);
+  }, []);
+
   // Validate session with backend on initial load
   useEffect(() => {
+    let isMounted = true;
+
     const verifySession = async () => {
       const token = localStorage.getItem('admire_user_token');
-      if (!token) {
-        setIsLoading(false);
+      const storedRefreshToken = localStorage.getItem('admire_user_refresh_token');
+
+      if (!token && !storedRefreshToken) {
+        if (isMounted) setIsLoading(false);
         return;
       }
 
       try {
-        const response = await apiRequest('/auth/me');
-        if (response && response.user) {
-          setUser(response.user);
-          setIsAuthenticated(true);
-          localStorage.setItem('admire_user_data', JSON.stringify(response.user));
+        // Step 1: Try current access token
+        if (token) {
+          try {
+            const response = await apiRequest('/auth/me');
+            if (response && response.user) {
+              if (isMounted) {
+                setUser(response.user);
+                setIsAuthenticated(true);
+                localStorage.setItem('admire_user_data', JSON.stringify(response.user));
+                scheduleSilentRefresh(token);
+                setIsLoading(false);
+              }
+              return;
+            }
+          } catch (meErr) {
+            console.warn('[Client Auth] Access token invalid or expired, attempting refresh...');
+          }
         }
-      } catch (err) {
-        console.warn('[Client Auth] Token validation failed, attempting refresh...');
-        try {
-          // Attempt silent refresh via HttpOnly cookie
-          const refreshRes = await apiRequest('/auth/refresh-token', { method: 'POST' });
-          if (refreshRes && refreshRes.accessToken) {
-            localStorage.setItem('admire_user_token', refreshRes.accessToken);
+
+        // Step 2: Attempt refresh using stored refresh token
+        if (storedRefreshToken) {
+          const refreshData = await refreshAccessToken();
+          if (refreshData && refreshData.accessToken) {
             const userRes = await apiRequest('/auth/me');
             if (userRes && userRes.user) {
-              setUser(userRes.user);
-              setIsAuthenticated(true);
-              localStorage.setItem('admire_user_data', JSON.stringify(userRes.user));
-              setIsLoading(false);
+              if (isMounted) {
+                setUser(userRes.user);
+                setIsAuthenticated(true);
+                localStorage.setItem('admire_user_data', JSON.stringify(userRes.user));
+                scheduleSilentRefresh(refreshData.accessToken);
+                setIsLoading(false);
+              }
               return;
             }
           }
-        } catch (refreshErr) {
-          console.warn('[Client Auth] Token refresh failed:', refreshErr.message);
         }
 
-        // Clean up invalid session
-        localStorage.removeItem('admire_user_token');
-        localStorage.removeItem('admire_user_refresh_token');
-        localStorage.removeItem('admire_user_data');
-        setUser(null);
-        setIsAuthenticated(false);
+        throw new Error('No valid session could be restored');
+      } catch (err) {
+        console.warn('[Client Auth] Session could not be restored:', err.message);
+        if (isMounted) {
+          localStorage.removeItem('admire_user_token');
+          localStorage.removeItem('admire_user_refresh_token');
+          localStorage.removeItem('admire_user_data');
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     verifySession();
-  }, []);
+
+    return () => {
+      isMounted = false;
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, [scheduleSilentRefresh]);
+
+  /**
+   * Listen for window focus / tab visibility to refresh token if expired while inactive
+   */
+  useEffect(() => {
+    const handleVisibilityOrFocus = async () => {
+      if (document.visibilityState === 'visible') {
+        const token = localStorage.getItem('admire_user_token');
+        const refreshToken = localStorage.getItem('admire_user_refresh_token');
+        if (!token && !refreshToken) return;
+
+        const expiryMs = getTokenExpiry(token);
+        const now = Date.now();
+        if (expiryMs <= now + 60000) {
+          try {
+            const refreshData = await refreshAccessToken();
+            if (refreshData && refreshData.accessToken) {
+              scheduleSilentRefresh(refreshData.accessToken);
+            }
+          } catch (err) {
+            console.warn('[Client Auth] Window focus refresh failed:', err.message);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+    };
+  }, [scheduleSilentRefresh]);
 
   /**
    * User Signup
@@ -104,6 +202,7 @@ export const AuthProvider = ({ children }) => {
 
       setUser(response.user);
       setIsAuthenticated(true);
+      scheduleSilentRefresh(response.accessToken);
       closeAuthModal();
 
       return { success: true, user: response.user };
@@ -135,6 +234,7 @@ export const AuthProvider = ({ children }) => {
 
       setUser(response.user);
       setIsAuthenticated(true);
+      scheduleSilentRefresh(response.accessToken);
       closeAuthModal();
 
       return { success: true, user: response.user };
@@ -148,6 +248,11 @@ export const AuthProvider = ({ children }) => {
    * User Logout
    */
   const logout = async () => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+
     try {
       await apiRequest('/auth/logout', { method: 'POST' }).catch(() => {});
     } finally {

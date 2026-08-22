@@ -1,48 +1,54 @@
 import { apiRequest } from './client';
-import { careersData } from '../data/careersData';
 
+/**
+ * Fetch active job openings from backend
+ */
 export const getJobPositions = async (departmentFilter = 'All') => {
-  const backendData = await apiRequest('/jobs');
-  const dataset = backendData || careersData;
-
-  if (departmentFilter === 'All') return dataset;
-  return dataset.filter(
-    (job) => job.department.toLowerCase() === departmentFilter.toLowerCase()
-  );
+  try {
+    const query = departmentFilter && departmentFilter !== 'All' ? `?department=${encodeURIComponent(departmentFilter)}` : '';
+    const res = await apiRequest(`/jobs${query}`);
+    const list = res?.jobs || [];
+    return list.map((j) => ({
+      ...j,
+      id: j._id || j.id,
+    }));
+  } catch (err) {
+    console.warn('[CareersApi] Error fetching jobs:', err.message);
+    throw err;
+  }
 };
 
-export const submitJobApplication = async (applicationData) => {
-  // If applicationData contains a file, construct FormData for backend multipart upload
-  let bodyPayload;
-  let headers = {};
-
-  if (applicationData.resumeFile instanceof File) {
-    const formData = new FormData();
-    Object.keys(applicationData).forEach((key) => {
-      if (key === 'resumeFile') {
-        formData.append('resume', applicationData.resumeFile);
-      } else if (applicationData[key] !== null && applicationData[key] !== undefined) {
-        formData.append(key, applicationData[key]);
-      }
-    });
-    bodyPayload = formData;
-  } else {
-    bodyPayload = JSON.stringify(applicationData);
-    headers = { 'Content-Type': 'application/json' };
+/**
+ * Fetch single job opening by ID
+ */
+export const getJobPositionById = async (id) => {
+  try {
+    const res = await apiRequest(`/jobs/${id}`);
+    const job = res?.job;
+    if (!job) return null;
+    return {
+      ...job,
+      id: job._id || job.id,
+    };
+  } catch (err) {
+    console.warn(`[CareersApi] Error fetching job ${id}:`, err.message);
+    throw err;
   }
+};
 
-  const backendResult = await apiRequest('/jobs/apply', {
-    method: 'POST',
-    body: bodyPayload,
-    headers,
-  });
-
-  if (backendResult) return backendResult;
-
-  // Mock response when backend is offline
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  return {
-    success: true,
-    message: `Application submitted successfully for ${applicationData.jobTitle || 'the position'}! We will review your resume and contact you soon.`,
-  };
+/**
+ * Submit job application with authenticated user & direct S3 resume
+ */
+export const submitJobApplication = async (jobId, applicationData) => {
+  try {
+    const endpoint = jobId ? `/jobs/${jobId}/apply` : '/jobs/apply';
+    const res = await apiRequest(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(applicationData),
+    });
+    return res;
+  } catch (err) {
+    console.error('[CareersApi] Error submitting job application:', err.message);
+    throw err;
+  }
 };
