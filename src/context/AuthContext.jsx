@@ -264,6 +264,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Send Password Reset OTP
+   */
+  const sendForgotPasswordOtp = async (email) => {
+    const response = await apiRequest('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return response;
+  };
+
+  /**
+   * Verify Password Reset OTP
+   */
+  const verifyOtp = async (email, otp) => {
+    const response = await apiRequest('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+    return response;
+  };
+
+  /**
+   * Reset Password
+   */
+  const resetPassword = async (email, otp, newPassword) => {
+    const response = await apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+    return response;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -273,6 +306,9 @@ export const AuthProvider = ({ children }) => {
         signup,
         login,
         logout,
+        sendForgotPasswordOtp,
+        verifyOtp,
+        resetPassword,
         isAuthModalOpen,
         authModalMode,
         openAuthModal,

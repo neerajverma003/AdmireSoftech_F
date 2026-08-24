@@ -16,7 +16,7 @@ import {
   UploadCloud,
   FileText,
   Trash2,
-  DollarSign,
+  IndianRupee,
   Building,
 } from 'lucide-react';
 import Toast from '../../components/common/Toast';
@@ -184,7 +184,13 @@ const CareerPage = () => {
       // 1. Direct S3 Upload if resume attached
       if (resumeFile) {
         setUploadProgressText('Uploading Resume directly to S3 bucket...');
-        const s3Result = await uploadFileToS3(resumeFile, 'job-resumes');
+        const s3Result = await uploadFileToS3(resumeFile, {
+          module: 'careers',
+          category: activeJob.title || activeJob.department || 'General Position',
+          experience: experience || activeJob.experience || 'Entry Level',
+          email: email.trim(),
+          candidateName: fullName.trim(),
+        });
         uploadedResumeUrl = s3Result.publicUrl;
         uploadedResumeKey = s3Result.key;
       }
@@ -324,7 +330,7 @@ const CareerPage = () => {
                         <span>{job.experience}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                        <DollarSign className="h-3.5 w-3.5" />
+                        <IndianRupee className="h-3.5 w-3.5" />
                         <span>{job.salary}</span>
                       </div>
                     </div>
@@ -461,7 +467,7 @@ const CareerPage = () => {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+1 (555) 000-0000"
+                      placeholder="+91 98765 43210"
                       className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>

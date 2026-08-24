@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   Globe,
   Clock,
-  DollarSign,
+  IndianRupee,
   Layers,
   ShieldCheck,
   Zap,
@@ -167,7 +167,13 @@ const FreelancePage = () => {
       // 1. Direct S3 Upload if resume attached
       if (resumeFile) {
         setUploadProgressText('Uploading Resume directly to S3 bucket...');
-        const s3Result = await uploadFileToS3(resumeFile, 'resumes');
+        const s3Result = await uploadFileToS3(resumeFile, {
+          module: 'freelance',
+          category: selectedProject.category || selectedProject.title || 'General Gig',
+          experience: availability || 'Flexible',
+          email: email.trim(),
+          candidateName: fullName.trim(),
+        });
         uploadedResumeUrl = s3Result.publicUrl;
         uploadedResumeKey = s3Result.key;
       }
@@ -372,7 +378,7 @@ const FreelancePage = () => {
 
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-lg bg-blue-600/15 text-cyan-400 flex items-center justify-center shrink-0 mt-0.5">
-                  <DollarSign className="w-4 h-4" />
+                  <IndianRupee className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-white">Competitive Rates</div>
@@ -496,12 +502,12 @@ const FreelancePage = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Hourly Rate Expectation ($/hr)</label>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Expected Rate (INR)</label>
                     <input
                       type="text"
                       value={hourlyRate}
                       onChange={(e) => setHourlyRate(e.target.value)}
-                      placeholder="e.g. $85/hr"
+                      placeholder="e.g. ₹1,500/hr or ₹1.2L/mo"
                       className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
@@ -526,7 +532,7 @@ const FreelancePage = () => {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+1 (555) 000-0000"
+                      placeholder="+91 98765 43210"
                       className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>

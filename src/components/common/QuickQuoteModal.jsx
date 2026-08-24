@@ -49,9 +49,9 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
   };
 
   const scopeOptions = [
-    { title: 'MVP / Initial Release', est: '$5k - $12k' },
-    { title: 'Full Enterprise System', est: '$15k - $35k' },
-    { title: 'Legacy Modernization & Cloud', est: '$10k - $25k' },
+    { title: 'MVP / Initial Release', est: '₹50k - ₹1.5 Lakhs' },
+    { title: 'Full Enterprise System', est: '₹2.5 Lakhs - ₹7.5 Lakhs' },
+    { title: 'Legacy Modernization & Cloud', est: '₹1.5 Lakhs - ₹4 Lakhs' },
   ];
 
   const currentScopeObj = scopeOptions.find((s) => s.title === scope) || scopeOptions[0];
@@ -83,7 +83,7 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
         scope,
         projectScope: scope,
         timeline,
-        estimatedBudget: currentScopeObj?.est || '$10k - $25k',
+        estimatedBudget: currentScopeObj?.est || '₹1.5 Lakhs - ₹4 Lakhs',
         notes,
       });
 
@@ -326,7 +326,7 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
               <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number (Optional)</label>
               <input
                 type="tel"
-                placeholder="+1 (555) 000-0000"
+                placeholder="+91 98765 43210"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"

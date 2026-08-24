@@ -1,8 +1,72 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Sparkles,
+  Code2,
+  Smartphone,
+  Cloud,
+  Cpu,
+  TrendingUp,
+  Activity,
+  BarChart3,
+  ShieldCheck,
+  GraduationCap,
+  Truck,
+  Building2,
+  Lock,
+  Stethoscope,
+  Landmark,
+  ShoppingBag,
+} from 'lucide-react';
 import { industriesData } from '../../data/industries';
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { getActiveIndustries } from '../../api/industriesApi';
+
+const iconMap = {
+  Code2,
+  Smartphone,
+  Cloud,
+  Cpu,
+  TrendingUp,
+  Activity,
+  BarChart3,
+  ShieldCheck,
+  GraduationCap,
+  Truck,
+  Building2,
+  Lock,
+  Stethoscope,
+  Landmark,
+  ShoppingBag,
+  Sparkles,
+};
 
 const IndustriesSection = () => {
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHomeIndustries = async () => {
+      try {
+        const live = await getActiveIndustries();
+        if (isMounted && Array.isArray(live) && live.length > 0) {
+          setItems(live.slice(0, 6));
+        } else {
+          setItems(industriesData);
+        }
+      } catch {
+        if (isMounted) setItems(industriesData);
+      }
+    };
+    fetchHomeIndustries();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const displayItems = items.length > 0 ? items : industriesData;
+
   return (
     <section id="industries" className="py-24 relative overflow-hidden bg-[#070C1E]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -21,22 +85,24 @@ const IndustriesSection = () => {
             </p>
           </div>
 
-          <a
-            href="#all-industries"
+          <Link
+            to="/industries"
             className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300 group transition-colors self-start md:self-auto"
           >
             <span>View All Industries</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </a>
+          </Link>
         </div>
 
         {/* Industry Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {industriesData.map((item) => {
-            const Icon = item.icon;
+          {displayItems.map((item) => {
+            const Icon = typeof item.icon === 'string' ? (iconMap[item.icon] || Sparkles) : (item.icon || Sparkles);
+            const itemId = item.id || item._id;
             return (
-              <div
-                key={item.id}
+              <Link
+                key={itemId}
+                to="/industries"
                 className="group glass-card glass-card-hover p-8 rounded-3xl relative overflow-hidden flex flex-col justify-between cursor-pointer"
               >
                 <div className="space-y-6">
@@ -49,17 +115,17 @@ const IndustriesSection = () => {
                     <h3 className="text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
                       {item.title}
                     </h3>
-                    <p className="text-slate-300 text-sm leading-relaxed">
+                    <p className="text-slate-300 text-sm leading-relaxed line-clamp-3">
                       {item.description}
                     </p>
                   </div>
                 </div>
 
                 <div className="pt-6 mt-6 border-t border-slate-800/60 flex items-center justify-between text-xs font-semibold text-slate-400 group-hover:text-cyan-400">
-                  <span>Learn More</span>
+                  <span>Explore Domain</span>
                   <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

@@ -11,7 +11,7 @@ import {
   User,
   Phone,
   Layers,
-  DollarSign,
+  IndianRupee,
   MessageSquare,
 } from 'lucide-react';
 import { submitContactForm } from '../../api/contactApi';
@@ -29,11 +29,11 @@ const servicesList = [
 ];
 
 const budgetRanges = [
-  '< $5k',
-  '$5k - $15k',
-  '$15k - $35k',
-  '$35k - $75k',
-  '$75k+',
+  '< ₹50k',
+  '₹50k - ₹1.5L',
+  '₹1.5L - ₹5L',
+  '₹5L - ₹15L',
+  '₹15L+',
 ];
 
 const ContactModal = ({
@@ -49,7 +49,7 @@ const ContactModal = ({
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [service, setService] = useState(defaultService);
-  const [budget, setBudget] = useState('$15k - $35k');
+  const [budget, setBudget] = useState('₹1.5L - ₹5L');
   const [message, setMessage] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -239,8 +239,8 @@ const ContactModal = ({
               </div>
             </div>
 
-            {/* Phone & Service Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Phone & Service Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-cyan-400" />
@@ -250,8 +250,8 @@ const ContactModal = ({
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+                  placeholder="+91 98765 43210"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -263,7 +263,7 @@ const ContactModal = ({
                 <select
                   value={service}
                   onChange={(e) => setService(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2 text-xs sm:text-sm text-white focus:border-cyan-400 focus:outline-none cursor-pointer"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-2 text-xs sm:text-sm text-white focus:border-cyan-400 focus:outline-none transition-colors cursor-pointer"
                 >
                   {servicesList.map((s) => (
                     <option key={s} value={s} className="bg-slate-900 text-white">
@@ -277,8 +277,8 @@ const ContactModal = ({
             {/* Estimated Budget Selector */}
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Estimated Budget Range</span>
+                <IndianRupee className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Estimated Budget Range (INR)</span>
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {budgetRanges.map((b) => (

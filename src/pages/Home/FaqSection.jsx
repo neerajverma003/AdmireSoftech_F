@@ -7,7 +7,7 @@ import {
   ShieldCheck,
   Code,
   Zap,
-  DollarSign,
+  IndianRupee,
   ArrowRight,
   Search,
   X,
@@ -22,7 +22,7 @@ const CATEGORIES = [
   { id: 'Engineering & Tech', label: 'Engineering & Tech', icon: Code },
   { id: 'Security & NDA', label: 'Security & NDA', icon: ShieldCheck },
   { id: 'Process & Timelines', label: 'Process & Timelines', icon: Zap },
-  { id: 'Pricing & Engagement', label: 'Pricing & Engagement', icon: DollarSign },
+  { id: 'Pricing & Engagement', label: 'Pricing & Engagement', icon: IndianRupee },
 ];
 
 const FaqSection = ({ onOpenContactModal }) => {

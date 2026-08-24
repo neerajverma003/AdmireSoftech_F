@@ -19,6 +19,7 @@ import { getActiveTeamMembers } from '../../api/teamApi';
 import CtaBanner from '../../components/common/CtaBanner';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
 import WriteReviewModal from '../../components/common/WriteReviewModal';
+import { useSettings } from '../../context/SettingsContext';
 
 const values = [
   {
@@ -71,6 +72,7 @@ const timeline = [
 ];
 
 const AboutPage = () => {
+  const { settings } = useSettings();
   const [testimonials, setTestimonials] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -148,7 +150,7 @@ const AboutPage = () => {
         <div className="relative z-10 max-w-4xl mx-auto space-y-5">
           {/* Eyebrow Pill */}
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-400 shadow-sm shadow-cyan-400/20">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            {/*<Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />*/}
             <span>WHO WE ARE & HOW WE WORK</span>
           </div>
 
@@ -185,7 +187,7 @@ const AboutPage = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-800">
             <div className="space-y-1">
               <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                250+
+                {settings?.stats?.totalProjects || '500+'}
               </div>
               <div className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400">
                 Enterprise Projects
@@ -194,28 +196,28 @@ const AboutPage = () => {
 
             <div className="space-y-1 pt-6 md:pt-0">
               <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
-                98%
+                {settings?.stats?.clientSatisfaction || '98%'}
               </div>
               <div className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400">
-                Client Retention Rate
+                Client Satisfaction
               </div>
             </div>
 
             <div className="space-y-1 pt-6 md:pt-0">
               <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                50+
+                {settings?.stats?.globalEnterprises || '45+'}
               </div>
               <div className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400">
-                Senior Architects
+                Global Enterprises
               </div>
             </div>
 
             <div className="space-y-1 pt-6 md:pt-0">
               <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
-                12+
+                {settings?.stats?.uptimeSLA || '99.9%'}
               </div>
               <div className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400">
-                Years of Mastery
+                Uptime SLA
               </div>
             </div>
           </div>
@@ -226,7 +228,7 @@ const AboutPage = () => {
       <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-24">
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 shadow-sm shadow-cyan-400/20">
-            <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
+           {/* <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-pulse" /> */}
             <span>Guiding Philosophy</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white">

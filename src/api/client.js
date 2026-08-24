@@ -2,7 +2,13 @@
  * Centralized API Client Layer for Admire Softech
  */
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+const rawBase = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:5000'
+).replace(/\/+$/, '');
+
+export const API_BASE_URL = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
 
 export const isBackendAvailable = true; // Connected to Node.js backend
 

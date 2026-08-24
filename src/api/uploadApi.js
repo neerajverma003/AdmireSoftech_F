@@ -1,43 +1,57 @@
-import { API_BASE_URL, apiRequest } from './client';
+import { apiRequest } from './client';
 
 /**
- * Upload a file directly to AWS S3 using a Presigned URL (No Multer / No server disk buffering)
+ * Upload a file directly to AWS S3 using a Presigned PUT URL with contextual folder hierarchy
  * @param {File} file - The file object from <input type="file" />
- * @param {string} folder - Destination folder on S3 ('resumes', 'images', 'candidate-profile')
+ * @param {Object|string} options - Upload context options or legacy folder string
+ * @param {string} [options.module='general'] - 'careers' | 'freelance' | 'avatars' | 'assets'
+ * @param {string} [options.category=''] - Job role, gig title, or category
+ * @param {string} [options.experience=''] - Experience level or availability
+ * @param {string} [options.email=''] - Candidate / user email address (used for unique folder identity)
+ * @param {string} [options.candidateName=''] - Candidate / user full name
+ * @param {string} [options.folder=''] - Custom folder fallback
  * @returns {Promise<{ publicUrl: string, previewUrl: string, key: string, fileName: string }>}
  */
-export const uploadFileToS3 = async (file, folder = 'resumes') => {
+export const uploadFileToS3 = async (file, options = {}) => {
   if (!file) throw new Error('No file provided for upload');
 
+  // Support both object options and legacy folder string parameter
+  const uploadOptions = typeof options === 'string'
+    ? { folder: options, module: options }
+    : options;
+
+  const {
+    module = 'general',
+    category = '',
+    experience = '',
+    email = '',
+    candidateName = '',
+    folder = '',
+  } = uploadOptions;
+
   try {
-    // 1. Request Presigned PUT URL from Backend
+    // 1. Request Presigned PUT URL with contextual metadata
     const presignedData = await apiRequest('/upload/generate-presigned-url', {
       method: 'POST',
       body: JSON.stringify({
         filename: file.name,
         contentType: file.type || 'application/octet-stream',
+        module,
+        category,
+        experience,
+        email: email || candidateName,
+        candidateName,
         folder,
       }),
     });
 
     if (!presignedData || !presignedData.presignedUrl) {
-      throw new Error(presignedData?.message || 'Failed to acquire S3 upload credentials');
+      throw new Error(presignedData?.message || 'Failed to acquire S3 presigned URL');
     }
 
     const { presignedUrl, publicUrl, previewUrl, key } = presignedData;
 
-    // If running in development without real AWS credentials, fallback gracefully
-    if (presignedUrl.includes('mock=true')) {
-      console.log('[S3 Upload] Simulated direct S3 upload for local development.');
-      return {
-        publicUrl,
-        previewUrl,
-        key,
-        fileName: file.name,
-      };
-    }
-
-    // 2. Direct HTTP PUT upload from Browser to Amazon S3
+    // 2. Direct HTTP PUT upload from Browser directly to Amazon S3
     const uploadResponse = await fetch(presignedUrl, {
       method: 'PUT',
       headers: {
@@ -47,7 +61,7 @@ export const uploadFileToS3 = async (file, folder = 'resumes') => {
     });
 
     if (!uploadResponse.ok) {
-      throw new Error(`Direct S3 upload failed with status: ${uploadResponse.status}`);
+      throw new Error(`Direct S3 upload failed with HTTP status: ${uploadResponse.status}`);
     }
 
     return {

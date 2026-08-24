@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Star,
@@ -18,8 +18,11 @@ import {
   Building2,
   Lock,
   Zap,
+  Globe,
+  Layers,
 } from 'lucide-react';
 import { industriesList } from '../../data/industriesData';
+import { getActiveIndustries } from '../../api/industriesApi';
 import TrustedBrands from '../Home/TrustedBrands';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
 
@@ -36,6 +39,10 @@ const iconMap = {
   Truck,
   Building2,
   Lock,
+  Zap,
+  Globe,
+  Layers,
+  Sparkles,
 };
 
 const coreServices = [
@@ -63,6 +70,28 @@ const coreServices = [
 
 const IndustriesPage = () => {
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [industries, setIndustries] = useState(industriesList);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadIndustries = async () => {
+      try {
+        const liveData = await getActiveIndustries();
+        if (isMounted && Array.isArray(liveData) && liveData.length > 0) {
+          setIndustries(liveData);
+        }
+      } catch (e) {
+        console.warn('Using local fallback industries:', e);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadIndustries();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleScrollToIndustries = () => {
     const el = document.getElementById('industries-grid');
@@ -146,13 +175,14 @@ const IndustriesPage = () => {
           </p>
         </div>
 
-        {/* 12 Industry Cards Grid */}
+        {/* Industry Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-7">
-          {industriesList.map((item) => {
+          {industries.map((item) => {
             const Icon = iconMap[item.icon] || Sparkles;
+            const itemId = item.id || item._id;
             return (
               <Link
-                key={item.id}
+                key={itemId}
                 to="/contact"
                 className="group rounded-3xl border border-slate-800/90 bg-slate-900/70 hover:border-cyan-500/50 hover:bg-slate-900/95 transition-all duration-300 overflow-hidden shadow-lg hover:shadow-[0_15px_35px_rgba(0,0,0,0.7)] flex flex-col justify-between"
               >
