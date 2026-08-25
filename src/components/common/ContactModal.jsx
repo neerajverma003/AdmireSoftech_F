@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
@@ -16,27 +16,10 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { submitContactForm } from '../../api/contactApi';
+import { getEstimatorConfig, DEFAULT_ESTIMATOR_CONFIG } from '../../api/estimatorConfigApi';
 import Toast from './Toast';
 import { useAuth } from '../../context/AuthContext';
 import logoImg from '../../assets/images/as_logo_icon.png';
-
-const servicesList = [
-  'DevOps & Cloud Automation',
-  'AI & Machine Learning',
-  'Full-Stack Web & SaaS',
-  'Mobile App Development',
-  'Cybersecurity & Audit',
-  'Dedicated IT Staffing',
-  'General IT Consultation',
-];
-
-const budgetRanges = [
-  '< ₹50k',
-  '₹50k - ₹1.5L',
-  '₹1.5L - ₹5L',
-  '₹5L - ₹15L',
-  '₹15L+',
-];
 
 const ContactModal = ({
   isOpen,
@@ -47,6 +30,7 @@ const ContactModal = ({
 }) => {
   const { user } = useAuth();
 
+  const [config, setConfig] = useState(DEFAULT_ESTIMATOR_CONFIG);
   const [fullName, setFullName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
@@ -59,18 +43,56 @@ const ContactModal = ({
   const [formErrors, setFormErrors] = useState({});
 
   // Sync with user details when modal opens or user logs in
-  React.useEffect(() => {
+  useEffect(() => {
     if (user && isOpen) {
       if (!fullName) setFullName(user.name || '');
       if (!email) setEmail(user.email || '');
     }
   }, [user, isOpen]);
 
+  // Load dynamic configuration
+  useEffect(() => {
+    let isMounted = true;
+    async function loadConfig() {
+      if (!isOpen) return;
+      try {
+        const liveConfig = await getEstimatorConfig();
+        if (liveConfig && isMounted) {
+          setConfig(liveConfig);
+          const ranges = liveConfig.contactModalConfig?.budgetRanges || [];
+          if (ranges.length > 0 && !ranges.includes(budget)) {
+            setBudget(ranges[1] || ranges[0]);
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading contact config:', err.message);
+      }
+    }
+    loadConfig();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
   // Toast
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
 
   if (!isOpen) return null;
+
+  const currentServicesList =
+    config.contactModalConfig?.servicesList?.length > 0
+      ? config.contactModalConfig.servicesList
+      : (config.services || []).filter((s) => s.isEnabled).map((s) => s.title);
+
+  const currentBudgetRanges =
+    config.contactModalConfig?.budgetRanges?.length > 0
+      ? config.contactModalConfig.budgetRanges
+      : DEFAULT_ESTIMATOR_CONFIG.contactModalConfig.budgetRanges;
+
+  const modalTitle = config.contactModalConfig?.title || title;
+  const modalSubtitle = config.contactModalConfig?.subtitle || subtitle;
+  const modalBadge = config.contactModalConfig?.badge || 'Direct Architect Access';
 
   const validate = () => {
     const errors = {};
@@ -80,8 +102,12 @@ const ContactModal = ({
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       errors.email = 'Please enter a valid email address';
     }
-    if (!message.trim() || message.trim().length < 10) {
-      errors.message = 'Please share a brief note about your requirements (10+ characters)';
+    if (config.fieldSettings?.requirePhone && !phone.trim()) {
+      errors.phone = 'Phone number is required';
+    }
+    const minLen = config.fieldSettings?.minMessageLength || 10;
+    if (!message.trim() || message.trim().length < minLen) {
+      errors.message = `Please share a brief note about your requirements (${minLen}+ characters)`;
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -179,15 +205,15 @@ const ContactModal = ({
 
           <div className="space-y-1.5 min-w-0 flex-1">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-0.5 text-xs font-mono font-semibold uppercase tracking-wider text-cyan-300 shadow-sm">
-              <span>Admire Softech • Direct Architect Access</span>
+              <span>{modalBadge}</span>
             </div>
 
             <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-              {title}
+              {modalTitle}
             </h2>
 
             <p className="text-xs sm:text-sm text-slate-300 font-light leading-relaxed">
-              {subtitle}
+              {modalSubtitle}
             </p>
 
             <div className="flex items-center gap-3 pt-0.5 text-[11px] font-mono text-cyan-400/90">
@@ -274,15 +300,25 @@ const ContactModal = ({
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Phone / WhatsApp (Optional)</span>
+                  <span>Phone / WhatsApp {config.fieldSettings?.requirePhone ? '*' : '(Optional)'}</span>
                 </label>
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (formErrors.phone) setFormErrors({ ...formErrors, phone: '' });
+                  }}
                   placeholder="+91 98765 43210"
-                  className="w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all"
+                  className={`w-full rounded-xl border px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none transition-all ${
+                    formErrors.phone
+                      ? 'border-red-500 bg-red-950/20 focus:border-red-400'
+                      : 'border-slate-700/80 bg-slate-900/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400'
+                  }`}
                 />
+                {formErrors.phone && (
+                  <span className="text-[11px] text-red-400 mt-1 block">{formErrors.phone}</span>
+                )}
               </div>
 
               <div>
@@ -295,7 +331,7 @@ const ContactModal = ({
                   onChange={(e) => setService(e.target.value)}
                   className="w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-3.5 py-2.5 text-xs sm:text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all cursor-pointer"
                 >
-                  {servicesList.map((s) => (
+                  {currentServicesList.map((s) => (
                     <option key={s} value={s} className="bg-slate-900 text-white">
                       {s}
                     </option>
@@ -311,7 +347,7 @@ const ContactModal = ({
                 <span>Estimated Investment Bracket (INR)</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {budgetRanges.map((b) => (
+                {currentBudgetRanges.map((b) => (
                   <button
                     key={b}
                     type="button"

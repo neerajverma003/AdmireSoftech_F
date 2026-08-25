@@ -15,6 +15,9 @@ import {
   Cloud,
   Smartphone,
   ShieldCheck,
+  Layers,
+  Globe,
+  Database,
   User,
   Mail,
   Phone,
@@ -22,62 +25,27 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { submitQuoteRequest } from '../../api/quotesApi';
+import { getEstimatorConfig, DEFAULT_ESTIMATOR_CONFIG } from '../../api/estimatorConfigApi';
 import logoImg from '../../assets/images/as_logo_icon.png';
 
-const SERVICE_OPTIONS = [
-  {
-    title: 'Web & SaaS Development',
-    desc: 'Custom web apps, platforms & portals',
-    icon: Code2,
-  },
-  {
-    title: 'AI & Machine Learning',
-    desc: 'LLM agents, vector DBs & automation',
-    icon: Cpu,
-  },
-  {
-    title: 'DevOps & Cloud Automation',
-    desc: 'AWS, Kubernetes & CI/CD pipelines',
-    icon: Cloud,
-  },
-  {
-    title: 'Mobile App Development',
-    desc: 'iOS, Android & React Native apps',
-    icon: Smartphone,
-  },
-  {
-    title: 'Cybersecurity & Audit',
-    desc: 'Pen-testing, compliance & zero-trust',
-    icon: ShieldCheck,
-  },
-];
-
-const SCOPE_OPTIONS = [
-  {
-    title: 'MVP / Initial Release',
-    subtitle: 'Core features, agile prototype launch',
-    est: '₹50k - ₹1.5 Lakhs',
-  },
-  {
-    title: 'Full Enterprise System',
-    subtitle: 'Production scale, high-throughput SLAs',
-    est: '₹2.5 Lakhs - ₹7.5 Lakhs',
-  },
-  {
-    title: 'Legacy Modernization & Cloud',
-    subtitle: 'Microservices migration, infra overhaul',
-    est: '₹1.5 Lakhs - ₹4 Lakhs',
-  },
-];
-
-const TIMELINE_OPTIONS = [
-  { label: '1 - 2 Months', note: 'Fast-track Sprint' },
-  { label: '3 - 6 Months', note: 'Standard Delivery' },
-  { label: '6+ Months', note: 'Strategic Roadmap' },
-];
+const ICON_MAP = {
+  Code2,
+  Cpu,
+  Cloud,
+  Smartphone,
+  ShieldCheck,
+  Layers,
+  Globe,
+  Database,
+  Sparkles,
+};
 
 const QuickQuoteModal = ({ isOpen, onClose }) => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
+
+  // Dynamic configuration state
+  const [config, setConfig] = useState(DEFAULT_ESTIMATOR_CONFIG);
+  const [loadingConfig, setLoadingConfig] = useState(false);
 
   const [step, setStep] = useState(1);
   const [serviceType, setServiceType] = useState('Web & SaaS Development');
@@ -90,6 +58,46 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Fetch live configuration on modal open
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLiveConfig() {
+      if (!isOpen) return;
+      try {
+        setLoadingConfig(true);
+        const liveConfig = await getEstimatorConfig();
+        if (liveConfig && isMounted) {
+          setConfig(liveConfig);
+
+          // Initialize defaults from live config if not already set
+          const activeServices = (liveConfig.services || []).filter((s) => s.isEnabled);
+          if (activeServices.length > 0 && !activeServices.some((s) => s.title === serviceType)) {
+            setServiceType(activeServices[0].title);
+          }
+
+          const activeScopes = (liveConfig.scopes || []).filter((s) => s.isEnabled);
+          if (activeScopes.length > 0 && !activeScopes.some((s) => s.title === scope)) {
+            setScope(activeScopes[0].title);
+          }
+
+          const activeTimelines = (liveConfig.timelines || []).filter((t) => t.isEnabled);
+          if (activeTimelines.length > 0 && !activeTimelines.some((t) => t.label === timeline)) {
+            setTimeline(activeTimelines[0].label);
+          }
+        }
+      } catch (err) {
+        console.warn('Using default estimator configuration:', err.message);
+      } finally {
+        if (isMounted) setLoadingConfig(false);
+      }
+    }
+
+    loadLiveConfig();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   // Sync user details if authentication status updates
   useEffect(() => {
@@ -109,14 +117,21 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
     if (step > 1) setStep(step - 1);
   };
 
-  const currentScopeObj = SCOPE_OPTIONS.find((s) => s.title === scope) || SCOPE_OPTIONS[0];
+  const activeScopes = (config.scopes || []).filter((s) => s.isEnabled);
+  const activeServices = (config.services || []).filter((s) => s.isEnabled);
+  const activeTimelines = (config.timelines || []).filter((t) => t.isEnabled);
+
+  const currentScopeObj =
+    activeScopes.find((s) => s.title === scope) ||
+    activeScopes[0] || { estPrice: '₹50k - ₹1.5 Lakhs' };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
-    // Require authentication
-    if (!isAuthenticated) {
+    // Check optional authentication requirement
+    const requireAuth = config.fieldSettings?.requireAuthForQuote;
+    if (requireAuth && !isAuthenticated) {
       openAuthModal('signup');
       return;
     }
@@ -126,19 +141,24 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
       return;
     }
 
+    if (config.fieldSettings?.requirePhone && !phone.trim()) {
+      setErrorMessage('Phone number is required by settings.');
+      return;
+    }
+
     setLoading(true);
     setIsSuccess(false);
 
     try {
       await submitQuoteRequest({
-        name: name || user?.name,
+        name: name || user?.name || 'Anonymous Inquiry',
         email: email || user?.email,
         phone,
         serviceType,
         scope,
         projectScope: scope,
         timeline,
-        estimatedBudget: currentScopeObj?.est || '₹1.5 Lakhs - ₹4 Lakhs',
+        estimatedBudget: currentScopeObj?.estPrice || currentScopeObj?.est || '₹1.5 Lakhs - ₹4 Lakhs',
         notes,
       });
 
@@ -189,14 +209,23 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
               />
             </div>
             <div>
+              {config.header?.badge && (
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-cyan-300 mb-1">
+                  <span>{config.header.badge}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-                  Instant Project Estimator
+                  {config.header?.title || 'Instant Project Estimator'}
                 </h3>
-               
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Step {step} of 3 — {step === 1 ? 'Select Service Domain' : step === 2 ? 'Scope & Budget Bracket' : 'Contact & Submission'}
+                Step {step} of 3 —{' '}
+                {step === 1
+                  ? 'Select Service Domain'
+                  : step === 2
+                  ? 'Scope & Budget Bracket'
+                  : 'Contact & Submission'}
               </p>
             </div>
           </div>
@@ -246,12 +275,12 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              {SERVICE_OPTIONS.map((opt) => {
-                const IconComponent = opt.icon;
+              {activeServices.map((opt) => {
+                const IconComponent = ICON_MAP[opt.iconName] || Code2;
                 const isSelected = serviceType === opt.title;
                 return (
                   <button
-                    key={opt.title}
+                    key={opt.id || opt.title}
                     type="button"
                     onClick={() => setServiceType(opt.title)}
                     className={`group relative flex items-start gap-3.5 rounded-2xl border p-4 text-left transition-all duration-300 cursor-pointer ${
@@ -309,11 +338,11 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
             </div>
 
             <div className="space-y-2.5">
-              {SCOPE_OPTIONS.map((s) => {
+              {activeScopes.map((s) => {
                 const isSelected = scope === s.title;
                 return (
                   <button
-                    key={s.title}
+                    key={s.id || s.title}
                     type="button"
                     onClick={() => setScope(s.title)}
                     className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all duration-300 cursor-pointer ${
@@ -325,12 +354,17 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
                     <div>
                       <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
                         <span>{s.title}</span>
+                        {s.badge && (
+                          <span className="rounded-full bg-cyan-400/15 border border-cyan-400/30 px-2 py-0.2 text-[10px] font-mono text-cyan-300">
+                            {s.badge}
+                          </span>
+                        )}
                         {isSelected && <Check className="h-3.5 w-3.5 text-cyan-400" />}
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5">{s.subtitle}</div>
                     </div>
-                    <div className="rounded-xl bg-slate-900/90 px-3.5 py-1.5 text-xs font-mono font-bold text-cyan-300 border border-cyan-500/30 shadow-sm">
-                      {s.est}
+                    <div className="rounded-xl bg-slate-900/90 px-3.5 py-1.5 text-xs font-mono font-bold text-cyan-300 border border-cyan-500/30 shadow-sm shrink-0 ml-2">
+                      {s.estPrice || s.est}
                     </div>
                   </button>
                 );
@@ -340,11 +374,11 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
             <div className="space-y-2 pt-1">
               <label className="block text-xs font-bold text-slate-200">Desired Target Timeline</label>
               <div className="grid grid-cols-3 gap-2.5">
-                {TIMELINE_OPTIONS.map((t) => {
+                {activeTimelines.map((t) => {
                   const isSelected = timeline === t.label;
                   return (
                     <button
-                      key={t.label}
+                      key={t.id || t.label}
                       type="button"
                       onClick={() => setTimeline(t.label)}
                       className={`rounded-2xl border p-3 text-center transition-all cursor-pointer ${
@@ -397,12 +431,12 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
                 </div>
               </div>
               <span className="font-mono font-bold text-cyan-200 bg-cyan-950/70 px-3 py-1 rounded-lg border border-cyan-400/30 text-xs shadow-inner">
-                {currentScopeObj.est}
+                {currentScopeObj.estPrice || currentScopeObj.est}
               </span>
             </div>
 
-            {/* Authentication Gate for Unauthenticated Users */}
-            {!isAuthenticated && (
+            {/* Authentication Gate if configured */}
+            {config.fieldSettings?.requireAuthForQuote && !isAuthenticated && (
               <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-2">
                 <div className="flex items-center gap-2 font-bold text-amber-300">
                   <Lock className="w-4 h-4" />
@@ -464,10 +498,11 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Phone / WhatsApp (Optional)</span>
+                <span>Phone / WhatsApp {config.fieldSettings?.requirePhone ? '*' : '(Optional)'}</span>
               </label>
               <input
                 type="tel"
+                required={config.fieldSettings?.requirePhone}
                 placeholder="+91 98765 43210"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
