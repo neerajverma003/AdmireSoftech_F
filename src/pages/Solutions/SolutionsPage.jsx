@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SEO from '../../components/SEO';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -67,7 +68,14 @@ const SolutionsPage = () => {
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
 
   return (
-    <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
+    <>
+      <SEO
+        title="Enterprise IT Solutions & Digital Transformation"
+        description="Accelerate business growth with Admire Softech's turnkey IT solutions, cloud architectures, AI automation, and cybersecurity frameworks."
+        canonical="https://admiresoftech.com/solutions"
+      />
+
+      <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
       <QuickQuoteModal isOpen={isQuoteModalOpen} onClose={() => setIsQuoteModalOpen(false)} />
 
       {/* Ambient background glows */}
@@ -283,7 +291,8 @@ const SolutionsPage = () => {
       <TrustedBrands />
 
     </main>
-  );
+  </>
+);
 };
 
 export default SolutionsPage;

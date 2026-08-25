@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SEO from '../../components/SEO';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -236,7 +237,14 @@ const FreelancePage = () => {
   };
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16">
+    <>
+      <SEO
+        title="Freelance & Contract Engineering Opportunities"
+        description="Apply for top freelance and contract developer gigs at Admire Softech. Collaborate on flexible, high-paying tech projects."
+        canonical="https://admiresoftech.com/freelance"
+      />
+
+      <main className="relative min-h-screen w-full overflow-hidden bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16">
       <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
 
       {/* Ambient background glow elements */}
@@ -667,7 +675,8 @@ const FreelancePage = () => {
           document.body
         )}
     </main>
-  );
+  </>
+);
 };
 
 export default FreelancePage;

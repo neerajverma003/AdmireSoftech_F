@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import SEO from '../../components/SEO';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -70,7 +71,14 @@ const FaqPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
+    <>
+      <SEO
+        title="Frequently Asked Questions - IT Services & Hiring"
+        description="Find answers to common questions about Admire Softech's development process, engagement models, security standards, and SLAs."
+        canonical="https://admiresoftech.com/faq"
+      />
+
+      <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
       <QuickQuoteModal isOpen={isQuoteModalOpen} onClose={() => setIsQuoteModalOpen(false)} />
 
       {/* Ambient background glows */}
@@ -252,7 +260,8 @@ const FaqPage = () => {
       <TrustedBrands />
 
     </main>
-  );
+  </>
+);
 };
 
 export default FaqPage;

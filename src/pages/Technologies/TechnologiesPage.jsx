@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import SEO from '../../components/SEO';
 import { Link } from 'react-router-dom';
 import {
   Star,
@@ -74,7 +75,14 @@ const TechnologiesPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
+    <>
+      <SEO
+        title="Our Tech Stack & Modern Engineering Capabilities"
+        description="Discover the modern technologies, cloud platforms, programming languages, and AI frameworks powered by Admire Softech engineers."
+        canonical="https://admiresoftech.com/technologies"
+      />
+
+      <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
       <QuickQuoteModal isOpen={isQuoteModalOpen} onClose={() => setIsQuoteModalOpen(false)} />
 
       {/* Ambient background glows */}
@@ -280,7 +288,8 @@ const TechnologiesPage = () => {
       <TrustedBrands />
 
     </main>
-  );
+  </>
+);
 };
 
 export default TechnologiesPage;
