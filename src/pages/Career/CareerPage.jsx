@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import SEO from '../../components/SEO';
 import { createPortal } from 'react-dom';
 import { getJobPositions, submitJobApplication } from '../../api/careersApi';
 import { uploadFileToS3 } from '../../api/uploadApi';
@@ -236,7 +237,14 @@ const CareerPage = () => {
   };
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16">
+    <>
+      <SEO
+        title="Careers - Join Our Global Engineering Team"
+        description="Explore exciting career opportunities at Admire Softech. Work on cutting-edge AI, cloud, and web projects with high-impact global teams."
+        canonical="https://admiresoftech.com/careers"
+      />
+
+      <main className="relative min-h-screen w-full overflow-hidden bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16">
       <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
 
       {/* Ambient lighting */}
@@ -632,7 +640,8 @@ const CareerPage = () => {
           document.body
         )}
     </main>
-  );
+  </>
+);
 };
 
 export default CareerPage;

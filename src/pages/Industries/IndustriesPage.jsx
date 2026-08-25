@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SEO from '../../components/SEO';
 import { Link } from 'react-router-dom';
 import {
   Star,
@@ -103,7 +104,14 @@ const IndustriesPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
+    <>
+      <SEO
+        title="Industry-Specific IT Solutions & Vertical Expertise"
+        description="Tailored technology engineering and digital solutions for FinTech, Healthcare, E-Commerce, Logistics, SaaS, and Enterprise verticals."
+        canonical="https://admiresoftech.com/industries"
+      />
+
+      <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
       <QuickQuoteModal isOpen={isQuoteModalOpen} onClose={() => setIsQuoteModalOpen(false)} />
 
       {/* Ambient background glows */}
@@ -308,7 +316,8 @@ const IndustriesPage = () => {
       <TrustedBrands />
 
     </main>
-  );
+  </>
+);
 };
 
 export default IndustriesPage;

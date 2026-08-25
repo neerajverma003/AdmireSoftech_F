@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SEO from '../../components/SEO';
 import {
   Target,
   Lightbulb,
@@ -99,7 +100,14 @@ const AboutPage = () => {
   }, []);
 
   return (
-    <main className="relative min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16 overflow-hidden">
+    <>
+      <SEO
+        title="About Us - Enterprise IT & Engineering Studio"
+        description="Learn about Admire Softech, our mission, leadership, core engineering values, and our journey delivering high-scale digital solutions worldwide."
+        canonical="https://admiresoftech.com/about"
+      />
+
+      <main className="relative min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16 overflow-hidden">
       
       {/* ──── HERO SECTION ──── */}
       <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-16 text-center">
@@ -310,7 +318,8 @@ const AboutPage = () => {
       />
 
     </main>
-  );
+  </>
+);
 };
 
 export default AboutPage;

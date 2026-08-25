@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import SEO from '../../components/SEO';
 import { Link } from 'react-router-dom';
 import {
   Star,
@@ -45,7 +46,14 @@ const TeamPage = () => {
   }, [team, selectedDept]);
 
   return (
-    <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
+    <>
+      <SEO
+        title="Our Team - Senior Developers & Technology Leaders"
+        description="Meet the visionary engineers, cloud architects, designers, and innovators behind Admire Softech's client success."
+        canonical="https://admiresoftech.com/team"
+      />
+
+      <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-36 pb-24 relative overflow-hidden">
       
       {/* Ambient background glows */}
       <div className="pointer-events-none absolute top-10 right-0 w-[600px] h-[600px] bg-blue-600/10 blur-[150px] rounded-full" />
@@ -252,7 +260,8 @@ const TeamPage = () => {
       </section>
 
     </main>
-  );
+  </>
+);
 };
 
 export default TeamPage;

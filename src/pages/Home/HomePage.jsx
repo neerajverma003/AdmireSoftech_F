@@ -1,3 +1,4 @@
+import SEO from '../../components/SEO';
 import React, { useState } from 'react';
 import Hero from './Hero';
 import TrustedBrands from './TrustedBrands';
@@ -16,24 +17,32 @@ const HomePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <main className="relative overflow-hidden">
-      <Hero />
-      <TrustedBrands />
-      <ComparisonSection />
-      <ServicesSection />
-      <CtaBanner onOpenModal={() => setIsModalOpen(true)} />
-      <AboutSection />
-      <TechStackSection />
-      <WhyChooseUs />
-      <FaqSection />
-      <CTASection />
-      <ClientReviewsSection />
-
-      <QuickQuoteModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+    <>
+      <SEO
+        title="IT Services & Digital Solutions"
+        description="Admire Softech delivers modern IT services, web development, cloud solutions, AI, automation and digital transformation solutions for growing businesses."
+        canonical="https://admiresoftech.com/"
       />
-    </main>
+
+      <main className="relative overflow-hidden">
+        <Hero />
+        <TrustedBrands />
+        <ComparisonSection />
+        <ServicesSection />
+        <CtaBanner onOpenModal={() => setIsModalOpen(true)} />
+        <AboutSection />
+        <TechStackSection />
+        <WhyChooseUs />
+        <FaqSection />
+        <CTASection />
+        <ClientReviewsSection />
+
+        <QuickQuoteModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      </main>
+    </>
   );
 };
 

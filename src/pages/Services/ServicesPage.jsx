@@ -1,4 +1,5 @@
 import React, { useState, useMemo, Suspense, lazy } from 'react';
+import SEO from '../../components/SEO';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
@@ -147,9 +148,16 @@ const ServicesPage = () => {
   };
 
   return (
-    <main id="services-page" className="relative min-h-screen w-full overflow-hidden bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16">
-      
-      {/* Subtle ambient background glows */}
+    <>
+      <SEO
+        title="IT Services & Solutions"
+        description="Explore Admire Softech's IT services including web development, cloud solutions, AI and automation, app development, cybersecurity and IT infrastructure."
+        canonical="https://admiresoftech.com/services"
+      />
+
+      <main id="services-page" className="relative min-h-screen w-full overflow-hidden bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16">
+        
+        {/* Subtle ambient background glows */}
       <div className="pointer-events-none absolute top-0 right-0 w-[60%] h-[600px]">
         <div className="absolute inset-0 bg-gradient-to-l from-blue-900/20 via-transparent to-transparent" />
         <div className="absolute top-1/4 right-10 w-96 h-96 bg-blue-600/15 blur-3xl rounded-full" />
@@ -491,7 +499,8 @@ const ServicesPage = () => {
         isOpen={isQuoteModalOpen}
         onClose={() => setIsQuoteModalOpen(false)}
       />
-    </main>
+      </main>
+    </>
   );
 };
 

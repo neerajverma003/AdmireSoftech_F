@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SEO from '../../components/SEO';
 import { submitContactForm } from '../../api/contactApi';
 import {
   Send,
@@ -93,7 +94,14 @@ const ContactPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-32 pb-24 relative overflow-hidden flex items-center justify-center">
+    <>
+      <SEO
+        title="Contact Us - Start Your Project with Admire Softech"
+        description="Get in touch with Admire Softech for custom software development, cloud consulting, or free project estimation."
+        canonical="https://admiresoftech.com/contact"
+      />
+
+      <main className="min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-32 pb-24 relative overflow-hidden flex items-center justify-center">
       <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
 
       {/* Ambient background glows */}
@@ -406,7 +414,8 @@ const ContactPage = () => {
         </div>
       </div>
     </main>
-  );
+  </>
+);
 };
 
 export default ContactPage;
