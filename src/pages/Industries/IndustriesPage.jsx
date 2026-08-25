@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { industriesList } from '../../data/industriesData';
 import { getActiveIndustries } from '../../api/industriesApi';
+import { useSmoothScroll } from '../../context/SmoothScrollContext';
 import TrustedBrands from '../Home/TrustedBrands';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
 
@@ -69,6 +70,7 @@ const coreServices = [
 ];
 
 const IndustriesPage = () => {
+  const { scrollTo } = useSmoothScroll();
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [industries, setIndustries] = useState(industriesList);
   const [loading, setLoading] = useState(true);
@@ -96,7 +98,7 @@ const IndustriesPage = () => {
   const handleScrollToIndustries = () => {
     const el = document.getElementById('industries-grid');
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      scrollTo(el, { offset: -80, duration: 1.2 });
     }
   };
 

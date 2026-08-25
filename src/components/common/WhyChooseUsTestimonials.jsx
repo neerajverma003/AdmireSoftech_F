@@ -1,14 +1,69 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ArrowRight, Star, Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowRight, Star } from 'lucide-react';
 import { competitiveEdgeMetrics } from '../../data/testimonialsData';
 import { getActiveTestimonials } from '../../api/testimonialsApi';
-import WriteReviewModal from './WriteReviewModal';
+
+const ReviewCard = ({ rev }) => {
+  const getInitials = (name) => {
+    if (!name) return 'AS';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  return (
+    <div className="w-[320px] sm:w-[380px] shrink-0 rounded-2xl border border-slate-800/90 bg-[#0A1024]/90 p-5 sm:p-6 transition-all duration-300 hover:border-cyan-400/50 hover:bg-[#0D1636] hover:shadow-xl hover:shadow-cyan-500/10 text-left flex flex-col justify-between select-none">
+      <div className="space-y-3">
+        {/* 5 Stars */}
+        <div className="flex items-center gap-1 text-amber-400">
+          {[...Array(rev.rating || 5)].map((_, i) => (
+            <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+          ))}
+        </div>
+
+        {/* Quote / Content */}
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-light line-clamp-4">
+          "{rev.content || rev.quote}"
+        </p>
+      </div>
+
+      {/* Author Row */}
+      <div className="flex items-center gap-3 pt-4 mt-3 border-t border-slate-800/80">
+        {rev.avatar ? (
+          <img
+            src={rev.avatar}
+            alt={rev.author}
+            className="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-700"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div
+          className={`h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800/90 border border-slate-700 text-cyan-300 text-xs font-mono font-bold ${
+            rev.avatar ? 'hidden' : 'flex'
+          }`}
+        >
+          {getInitials(rev.author)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs sm:text-sm font-bold text-white truncate">
+            {rev.author}
+          </div>
+          <div className="text-[11px] text-slate-400 truncate font-mono">
+            {rev.role}{rev.company ? `, ${rev.company}` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
   const [testimonials, setTestimonials] = useState([]);
-  const [startIndex, setStartIndex] = useState(0);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -24,10 +79,9 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
     };
     fetchReviews();
 
-    // Re-fetch every 30 seconds so admin changes reflect live
+    // Re-fetch every 30 seconds so admin updates reflect live
     const pollInterval = setInterval(fetchReviews, 30000);
 
-    // Also re-fetch when user tabs back to the page
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchReviews();
@@ -42,32 +96,20 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
     };
   }, []);
 
-  const nextTestimonials = () => {
-    if (testimonials.length <= 3) return;
-    if (startIndex + 3 < testimonials.length) {
-      setStartIndex((prev) => prev + 1);
-    } else {
-      setStartIndex(0);
+  // Split into 2 rows and duplicate for infinite continuous running animation
+  const { row1List, row2List } = useMemo(() => {
+    if (testimonials.length === 0) {
+      return { row1List: [], row2List: [] };
     }
-  };
+    const mid = Math.ceil(testimonials.length / 2);
+    const row1 = testimonials.slice(0, mid);
+    const row2 = testimonials.slice(mid);
 
-  const prevTestimonials = () => {
-    if (testimonials.length <= 3) return;
-    if (startIndex > 0) {
-      setStartIndex((prev) => prev - 1);
-    } else {
-      setStartIndex(Math.max(0, testimonials.length - 3));
-    }
-  };
-
-  const visibleTestimonials = testimonials.slice(startIndex, startIndex + 3);
-  // In case there are fewer than 3 at the end, wrap around if there are items
-  const displayItems =
-    testimonials.length === 0
-      ? []
-      : visibleTestimonials.length < 3 && testimonials.length >= 3
-      ? [...visibleTestimonials, ...testimonials.slice(0, 3 - visibleTestimonials.length)]
-      : visibleTestimonials;
+    return {
+      row1List: [...row1, ...row1, ...row1, ...row1],
+      row2List: [...row2, ...row2, ...row2, ...row2],
+    };
+  }, [testimonials]);
 
   return (
     <div className="w-full pt-16 pb-20 space-y-28">
@@ -79,7 +121,6 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
           {/* Left Column: Heading & Label */}
           <div className="lg:col-span-5 space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-cyan-400 uppercase font-semibold">
-              
               <span>Our Competitive Edge</span>
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
@@ -103,7 +144,7 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
                   </div>
                 </div>
 
-                {/* Subtle SVG Graph Curves matching reference */}
+                {/* Subtle SVG Graph Curves */}
                 <div className="pt-4 h-10 w-full flex items-end">
                   {item.graphType === 'upward' && (
                     <svg className="w-full h-8 overflow-visible" viewBox="0 0 100 30" fill="none">
@@ -149,104 +190,65 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
         </div>
       </section>
 
-      {/* ──── SECTION 2: TESTIMONIALS (3 CARDS + ARROW NAVIGATION) ──── */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Header with Navigation Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-cyan-400 uppercase font-semibold">
-              
-              <span>What Our Clients Say</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Testimonials
-            </h2>
+      {/* ──── SECTION 2: TESTIMONIALS (2-LINE RUNNING MARQUEE TICKER) ──── */}
+      <section className="relative w-full overflow-hidden font-poppins">
+        {/* Header with Rating Badge */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 text-center space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3.5 py-1 text-xs font-mono font-semibold uppercase tracking-wider text-cyan-400 shadow-sm shadow-cyan-400/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span>What Our Clients Say</span>
           </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+            Testimonials
+          </h2>
+          <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-2xl mx-auto font-light">
+            Founders and engineering leaders on what it is like to partner with Admire Softech.
+          </p>
 
-          {/* Carousel Arrows */}
-          <div className="flex items-center gap-3 self-end sm:self-auto">
-            {/* Public review button commented out - admin managed */}
-            {/* <button
-              type="button"
-              onClick={() => setIsReviewModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 transition-all cursor-pointer shadow-sm"
-            >
-              <Star className="h-3.5 w-3.5 fill-cyan-400 text-cyan-400" />
-              <span>Leave a Review</span>
-            </button> */}
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={prevTestimonials}
-                className="w-9 h-9 rounded-full border border-slate-800 bg-slate-900/80 hover:bg-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
-                aria-label="Previous Testimonials"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={nextTestimonials}
-                className="w-9 h-9 rounded-full border border-slate-800 bg-slate-900/80 hover:bg-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95"
-                aria-label="Next Testimonials"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+          {/* Rating Summary Pill */}
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-xs sm:text-sm text-slate-300 shadow-sm">
+              <div className="flex items-center text-amber-400 gap-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                ))}
+              </div>
+              <span className="font-bold text-white">4.9/5</span>
+              <span className="text-slate-400 font-mono text-[11px]">
+                across {testimonials.length}+ verified client reviews
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Testimonials 3-Card Grid */}
-        {displayItems.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-7">
-            <AnimatePresence mode="popLayout">
-              {displayItems.map((item, idx) => (
-                <motion.div
-                  key={`${item.id || item._id}-${idx}`}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.3, delay: idx * 0.08 }}
-                  className="group rounded-3xl border border-slate-800/80 bg-slate-900/50 p-6 sm:p-7 hover:border-cyan-500/40 hover:bg-slate-900/85 transition-all duration-300 flex flex-col justify-between shadow-xl backdrop-blur-sm"
-                >
-                  <div>
-                    {/* Quote Icon */}
-                    <span className="text-3xl sm:text-4xl font-serif text-slate-500 group-hover:text-cyan-400 transition-colors block mb-3 leading-none select-none">
-                      “
-                    </span>
-                    
-                    {/* Quote Text */}
-                    <p className="text-xs sm:text-sm text-slate-300 font-light leading-relaxed mb-6">
-                      {item.content || item.quote}
-                    </p>
-                  </div>
+        {/* 2-Line Continuous Running Marquee (Line 1 Left, Line 2 Right) */}
+        {testimonials.length > 0 ? (
+          <div className="relative w-full space-y-4 sm:space-y-5 overflow-hidden">
+            {/* Edge Gradient Fades */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-24 sm:w-48 bg-gradient-to-r from-[#070C1E] via-[#070C1E]/80 to-transparent z-20" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-24 sm:w-48 bg-gradient-to-l from-[#070C1E] via-[#070C1E]/80 to-transparent z-20" />
 
-                  {/* Author Info with Avatar */}
-                  <div className="pt-4 border-t border-slate-800/60 flex items-center gap-3">
-                    {item.avatar && (
-                      <img
-                        src={item.avatar}
-                        alt={item.author}
-                        className="w-9 h-9 rounded-full object-cover border border-slate-700/80"
-                        loading="lazy"
-                      />
-                    )}
-                    <div>
-                      <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
-                        {item.author}
-                      </h4>
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mt-0.5">
-                        {item.role}{item.company ? ` — ${item.company}` : ''}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            {/* LINE 1: Runs Left */}
+            <div className="flex w-full overflow-hidden">
+              <div className="animate-marquee-left flex gap-4 sm:gap-5">
+                {row1List.map((rev, index) => (
+                  <ReviewCard key={`row1-${rev.id || rev._id}-${index}`} rev={rev} />
+                ))}
+              </div>
+            </div>
+
+            {/* LINE 2: Runs Right */}
+            <div className="flex w-full overflow-hidden">
+              <div className="animate-marquee-right flex gap-4 sm:gap-5">
+                {row2List.map((rev, index) => (
+                  <ReviewCard key={`row2-${rev.id || rev._id}-${index}`} rev={rev} />
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
-          <div className="rounded-3xl border border-slate-800/80 bg-slate-900/30 p-8 text-center text-slate-400 text-xs font-mono">
-            No approved client testimonials published yet. Click "Leave a Review" above to share your feedback!
+          <div className="max-w-4xl mx-auto rounded-3xl border border-slate-800/80 bg-slate-900/30 p-8 text-center text-slate-400 text-xs font-mono">
+            No approved client testimonials published yet.
           </div>
         )}
       </section>
@@ -274,12 +276,6 @@ const WhyChooseUsTestimonials = ({ onOpenQuoteModal }) => {
           </div>
         </div>
       </section>
-
-      {/* Write Review Modal commented out - admin managed */}
-      {/* <WriteReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-      /> */}
 
     </div>
   );

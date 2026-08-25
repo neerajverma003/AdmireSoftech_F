@@ -4,21 +4,11 @@ import {
   Lightbulb,
   TrendingUp,
   ShieldCheck,
-  ChevronLeft,
-  ChevronRight,
-  Star,
-  Sparkles,
-  Quote,
   ArrowRight,
-  Award,
-  Globe,
-  Users,
 } from 'lucide-react';
-import { getActiveTestimonials } from '../../api/testimonialsApi';
 import { getActiveTeamMembers } from '../../api/teamApi';
 import CtaBanner from '../../components/common/CtaBanner';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
-import WriteReviewModal from '../../components/common/WriteReviewModal';
 import { useSettings } from '../../context/SettingsContext';
 
 const values = [
@@ -38,62 +28,54 @@ const values = [
     icon: ShieldCheck,
     title: 'Zero-Trust Transparency',
     description:
-      'Uncompromising data privacy, security compliance, and clear agile communication across every sprint.',
+      'We operate with full code visibility, continuous CI/CD observability, and proactive communication at every stage.',
   },
   {
     icon: TrendingUp,
-    title: 'Built to Scale',
+    title: 'Elastic Scalability',
     description:
-      'Software built today must effortlessly handle tomorrow’s 10x throughput without architectural rewrites.',
+      'We architect modular systems that gracefully absorb enterprise traffic spikes and grow with your business trajectory.',
   },
 ];
 
 const timeline = [
   {
     year: '2020',
-    title: 'Foundation',
-    desc: 'Started as a boutique cloud & web engineering studio with core focus on high-performance infrastructure.',
+    title: 'Company Inception',
+    desc: 'Founded by senior cloud architects aiming to bring elite software craftsmanship to high-growth startups.',
   },
   {
     year: '2022',
-    title: 'Global Scale',
-    desc: 'Crossed 100+ enterprise deliveries across US, Europe & Asia with 24/7 follow-the-sun reliability.',
+    title: 'Global Expansion',
+    desc: 'Delivered mission-critical cloud migrations and enterprise platforms across North America, Europe, and APAC.',
   },
   {
     year: '2024',
-    title: 'AI Lab Launch',
-    desc: 'Established dedicated Generative AI, custom fine-tuning, and LLM orchestration units.',
+    title: 'AI & Machine Learning CoE',
+    desc: 'Launched specialized AI practice delivering bespoke LLM agents, predictive models, and vector pipelines.',
   },
   {
     year: '2026',
-    title: '250+ Milestone',
+    title: 'Enterprise Dominance',
     desc: 'Expanded team to 50+ senior engineers with a 98% client retention rate.',
   },
 ];
 
 const AboutPage = () => {
   const { settings } = useSettings();
-  const [testimonials, setTestimonials] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     const fetchPageData = async () => {
       try {
-        const [reviewsData, teamData] = await Promise.all([
-          getActiveTestimonials().catch(() => []),
-          getActiveTeamMembers().catch(() => []),
-        ]);
-        if (isMounted) {
-          if (Array.isArray(reviewsData)) setTestimonials(reviewsData);
-          if (Array.isArray(teamData)) setTeamMembers(teamData.slice(0, 4));
+        const teamData = await getActiveTeamMembers().catch(() => []);
+        if (isMounted && Array.isArray(teamData)) {
+          setTeamMembers(teamData.slice(0, 4));
         }
       } catch (err) {
-        console.warn('[AboutPage] Error fetching page data:', err.message);
+        console.warn('[AboutPage] Error fetching team data:', err.message);
       }
     };
     fetchPageData();
@@ -116,28 +98,6 @@ const AboutPage = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (isPaused || testimonials.length === 0) return;
-
-    const timer = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5500);
-
-    return () => clearInterval(timer);
-  }, [isPaused, testimonials.length]);
-
-  const prevTestimonial = () => {
-    if (testimonials.length === 0) return;
-    setActiveTestimonial((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1));
-  };
-
-  const nextTestimonial = () => {
-    if (testimonials.length === 0) return;
-    setActiveTestimonial((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
-  };
-
-  const t = testimonials.length > 0 ? (testimonials[activeTestimonial] || testimonials[0]) : null;
-
   return (
     <main className="relative min-h-screen bg-[#070C1E] text-slate-100 font-poppins pt-28 pb-16 overflow-hidden">
       
@@ -150,7 +110,6 @@ const AboutPage = () => {
         <div className="relative z-10 max-w-4xl mx-auto space-y-5">
           {/* Eyebrow Pill */}
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-400 shadow-sm shadow-cyan-400/20">
-            {/*<Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />*/}
             <span>WHO WE ARE & HOW WE WORK</span>
           </div>
 
@@ -228,7 +187,6 @@ const AboutPage = () => {
       <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-24">
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-3 shadow-sm shadow-cyan-400/20">
-           {/* <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-pulse" /> */}
             <span>Guiding Philosophy</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
@@ -342,90 +300,6 @@ const AboutPage = () => {
         ) : null}
       </section>
 
-      {/* ──── CLIENT TESTIMONIALS SLIDER ──── */}
-      {t && (
-        <section className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mb-24">
-          <div
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            className="relative overflow-hidden rounded-3xl border border-blue-600/30 bg-gradient-to-br from-blue-950/70 via-slate-900/90 to-slate-900/95 p-8 sm:p-14 shadow-2xl text-center group"
-          >
-            <div className="pointer-events-none absolute -top-12 -right-12 h-44 w-44 rounded-full bg-cyan-400/10 blur-3xl" />
-            <Quote className="pointer-events-none absolute top-6 left-6 h-16 w-16 text-slate-800/40 -scale-x-100 select-none" />
-
-            {/* Star Ratings */}
-            <div className="flex justify-center gap-1.5 mb-6 relative z-10">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]" />
-              ))}
-            </div>
-
-            {/* Quote Body */}
-            <div className="relative z-10 min-h-[110px] sm:min-h-[90px] flex items-center justify-center">
-              <p className="text-lg sm:text-xl md:text-2xl italic text-slate-100 leading-relaxed max-w-3xl mx-auto font-light">
-                "{t.quote}"
-              </p>
-            </div>
-
-            {/* Author Details */}
-            <div className="relative z-10 mt-6 space-y-1">
-              <div className="font-bold text-white text-lg sm:text-xl">{t.author}</div>
-              <div className="text-xs sm:text-sm font-medium text-cyan-400">{t.role}</div>
-            </div>
-
-            {/* Navigation Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mt-10 pt-6 border-t border-slate-800/80 relative z-10">
-              <div className="flex items-center gap-2">
-                {testimonials.map((item, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveTestimonial(idx)}
-                    className={`h-2 rounded-full transition-all duration-500 cursor-pointer ${
-                      activeTestimonial === idx
-                        ? 'w-8 bg-gradient-to-r from-blue-600 to-cyan-400 shadow-[0_0_10px_#06B6D4]'
-                        : 'w-2 bg-slate-700 hover:bg-slate-600'
-                    }`}
-                    aria-label={`Go to slide ${idx + 1}`}
-                  />
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Public review button commented out - admin managed */}
-                {/* <button
-                  type="button"
-                  onClick={() => setIsReviewModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 transition-all cursor-pointer shadow-sm"
-                >
-                  <Star className="h-3.5 w-3.5 fill-cyan-400 text-cyan-400" />
-                  <span>Leave a Review</span>
-                </button> */}
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={prevTestimonial}
-                    className="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white hover:bg-blue-600 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-600/20 transition-all cursor-pointer"
-                    aria-label="Previous testimonial"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={nextTestimonial}
-                    className="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white hover:bg-blue-600 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-600/20 transition-all cursor-pointer"
-                    aria-label="Next testimonial"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ──── BOTTOM WORKFLOW CTA BANNER ──── */}
       <CtaBanner onOpenModal={() => setIsQuoteModalOpen(true)} />
 
@@ -434,12 +308,6 @@ const AboutPage = () => {
         isOpen={isQuoteModalOpen}
         onClose={() => setIsQuoteModalOpen(false)}
       />
-
-      {/* WriteReviewModal commented out - admin managed */}
-      {/* <WriteReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-      /> */}
 
     </main>
   );

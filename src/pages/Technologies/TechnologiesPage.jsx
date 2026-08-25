@@ -13,6 +13,7 @@ import { LOGOS, categories, categoryData } from '../../data/techStackData';
 import TechStackSection from '../Home/TechStackSection';
 import TrustedBrands from '../Home/TrustedBrands';
 import QuickQuoteModal from '../../components/common/QuickQuoteModal';
+import { useSmoothScroll } from '../../context/SmoothScrollContext';
 
 // 4x3 Hero Tech Icons Matrix for the MeteorOps-style Hero Card
 const heroPlatforms = [
@@ -31,6 +32,7 @@ const heroPlatforms = [
 ];
 
 const TechnologiesPage = () => {
+  const { scrollTo } = useSmoothScroll();
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -69,7 +71,7 @@ const TechnologiesPage = () => {
   const handleScrollToTech = () => {
     const el = document.getElementById('tech-browser');
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      scrollTo(el, { offset: -80, duration: 1.2 });
     }
   };
 

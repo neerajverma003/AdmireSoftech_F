@@ -1,6 +1,7 @@
 import React from 'react';
 import homeBg from '../../assets/images/home_background.png';
 import { motion } from 'framer-motion';
+import { useSmoothScroll } from '../../context/SmoothScrollContext';
 
 const ROTATING_WORDS = [
   'Solutions.',
@@ -87,10 +88,22 @@ const AnimatedStat = ({ target, suffix = '', label }) => {
 };
 
 const Hero = () => {
+  const { scrollTo } = useSmoothScroll();
+
   const handleScrollToNext = (e) => {
     e.preventDefault();
     const target = document.getElementById('brands') || document.getElementById('services');
-    target?.scrollIntoView({ behavior: 'smooth' });
+    if (target) {
+      scrollTo(target, { offset: -80, duration: 1.2 });
+    }
+  };
+
+  const handleScrollToServices = (e) => {
+    e.preventDefault();
+    const target = document.getElementById('services');
+    if (target) {
+      scrollTo(target, { offset: -80, duration: 1.2 });
+    }
   };
 
   return (
@@ -173,6 +186,7 @@ const Hero = () => {
                 <div className="pt-2">
                   <a
                     href="#services"
+                    onClick={handleScrollToServices}
                     className="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-cyan-500 text-white text-sm font-semibold transition-all duration-300 shadow-[0_0_20px_rgba(37,99,235,0.5)] hover:shadow-[0_0_28px_rgba(6,182,212,0.6)] hover:scale-105 active:scale-95 transform-gpu"
                   >
                     Explore Solutions

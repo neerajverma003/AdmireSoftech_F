@@ -195,23 +195,24 @@ export default function AuthModal() {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div data-lenis-prevent className="fixed inset-0 z-50 flex items-center justify-center p-4">
         {/* Backdrop overlay */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={closeAuthModal}
-          className="fixed inset-0 bg-[#030612]/80 backdrop-blur-md cursor-pointer"
+          className="fixed inset-0 bg-[#030612]/45 backdrop-blur-[8px] cursor-pointer transition-opacity duration-300"
         />
 
         {/* Modal Container */}
         <motion.div
+          data-lenis-prevent
           initial={{ opacity: 0, scale: 0.94, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 15 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 w-full max-w-md rounded-3xl bg-[#091024]/95 border border-cyan-500/30 p-6 sm:p-8 shadow-2xl shadow-cyan-950/60 backdrop-blur-2xl text-slate-100 overflow-hidden"
+          className="relative z-10 w-full max-w-md max-h-[92vh] overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] rounded-3xl bg-[#091024]/85 border border-cyan-500/30 p-6 sm:p-8 shadow-2xl shadow-cyan-950/60 backdrop-blur-2xl text-slate-100"
         >
           {/* Ambient Glows */}
           <div className="absolute -top-24 -left-24 w-60 h-60 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none" />
