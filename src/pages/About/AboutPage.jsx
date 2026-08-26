@@ -142,8 +142,8 @@ const AboutPage = () => {
   return (
     <>
       <SEO
-        title="About Us - Enterprise IT & Engineering Studio"
-        description="Learn about Admire Softech, our mission, leadership, core engineering values, and our journey delivering high-scale digital solutions worldwide."
+        title="About Us"
+        description="Learn about Admire Softech, our team, engineering approach and technology solutions that help businesses grow."
         canonical="https://admiresoftech.com/about"
       />
 

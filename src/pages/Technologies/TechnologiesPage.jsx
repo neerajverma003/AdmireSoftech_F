@@ -77,8 +77,8 @@ const TechnologiesPage = () => {
   return (
     <>
       <SEO
-        title="Our Tech Stack & Modern Engineering Capabilities"
-        description="Discover the modern technologies, cloud platforms, programming languages, and AI frameworks powered by Admire Softech engineers."
+        title="Technologies & Tech Stack"
+        description="Explore the modern technologies, frameworks, cloud platforms and tools used by Admire Softech to build scalable digital solutions."
         canonical="https://admiresoftech.com/technologies"
       />
 

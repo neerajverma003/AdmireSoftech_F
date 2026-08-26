@@ -70,8 +70,8 @@ const SolutionsPage = () => {
   return (
     <>
       <SEO
-        title="Enterprise IT Solutions & Digital Transformation"
-        description="Accelerate business growth with Admire Softech's turnkey IT solutions, cloud architectures, AI automation, and cybersecurity frameworks."
+        title="Technology Solutions"
+        description="Explore scalable technology solutions from Admire Softech for modern businesses, digital platforms and enterprise transformation."
         canonical="https://admiresoftech.com/solutions"
       />
 

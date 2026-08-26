@@ -19,8 +19,8 @@ const HomePage = () => {
   return (
     <>
       <SEO
-        title="IT Services & Digital Solutions"
-        description="Admire Softech delivers modern IT services, web development, cloud solutions, AI, automation and digital transformation solutions for growing businesses."
+        title="Transforming Ideas Into Intelligent Solutions"
+        description="Admire Softech delivers innovative IT services including web development, cloud, AI, software development and digital transformation solutions."
         canonical="https://admiresoftech.com/"
       />
 

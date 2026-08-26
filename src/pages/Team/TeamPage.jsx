@@ -48,8 +48,8 @@ const TeamPage = () => {
   return (
     <>
       <SEO
-        title="Our Team - Senior Developers & Technology Leaders"
-        description="Meet the visionary engineers, cloud architects, designers, and innovators behind Admire Softech's client success."
+        title="Our Team"
+        description="Meet the team behind Admire Softech and discover the engineers and technology professionals building innovative digital solutions."
         canonical="https://admiresoftech.com/team"
       />
 

@@ -104,8 +104,8 @@ const IndustriesPage = () => {
   return (
     <>
       <SEO
-        title="Industry-Specific IT Solutions & Vertical Expertise"
-        description="Tailored technology engineering and digital solutions for FinTech, Healthcare, E-Commerce, Logistics, SaaS, and Enterprise verticals."
+        title="Industries We Serve"
+        description="Discover technology solutions from Admire Softech designed for businesses across different industries and digital environments."
         canonical="https://admiresoftech.com/industries"
       />
 

@@ -150,7 +150,7 @@ const ServicesPage = () => {
   return (
     <>
       <SEO
-        title="IT Services & Solutions"
+        title="IT Services | Web, Cloud, AI & Software Development"
         description="Explore Admire Softech's IT services including web development, cloud solutions, AI and automation, app development, cybersecurity and IT infrastructure."
         canonical="https://admiresoftech.com/services"
       />

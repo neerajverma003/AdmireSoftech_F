@@ -239,8 +239,8 @@ const CareerPage = () => {
   return (
     <>
       <SEO
-        title="Careers - Join Our Global Engineering Team"
-        description="Explore exciting career opportunities at Admire Softech. Work on cutting-edge AI, cloud, and web projects with high-impact global teams."
+        title="Careers"
+        description="Explore career opportunities at Admire Softech and join a team building modern software, cloud, AI and digital solutions."
         canonical="https://admiresoftech.com/careers"
       />
 

@@ -239,8 +239,8 @@ const FreelancePage = () => {
   return (
     <>
       <SEO
-        title="Freelance & Contract Engineering Opportunities"
-        description="Apply for top freelance and contract developer gigs at Admire Softech. Collaborate on flexible, high-paying tech projects."
+        title="Freelance With Us"
+        description="Work with Admire Softech on exciting technology projects and collaborate with our engineering team."
         canonical="https://admiresoftech.com/freelance"
       />
 

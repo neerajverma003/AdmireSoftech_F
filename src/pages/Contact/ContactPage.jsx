@@ -96,8 +96,8 @@ const ContactPage = () => {
   return (
     <>
       <SEO
-        title="Contact Us - Start Your Project with Admire Softech"
-        description="Get in touch with Admire Softech for custom software development, cloud consulting, or free project estimation."
+        title="Contact Us"
+        description="Contact Admire Softech for web development, cloud, AI, software development and digital transformation solutions. Get in touch with our team today."
         canonical="https://admiresoftech.com/contact"
       />
 
