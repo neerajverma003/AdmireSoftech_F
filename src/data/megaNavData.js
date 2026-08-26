@@ -96,7 +96,7 @@ export const megaNavData = [
         {
           title: 'Case studies',
           subtitle: 'Outcomes we have delivered',
-          href: '/#brands',
+          href: '/case-studies',
           icon: FileText,
         },
         {

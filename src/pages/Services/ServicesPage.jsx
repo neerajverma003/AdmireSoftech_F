@@ -406,7 +406,7 @@ const ServicesPage = () => {
       {/* ───── SERVICE DETAIL MODAL (Rendered at Body Level via Portal) ───── */}
       {selectedService &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-scrollbar">
+          <div data-lenis-prevent className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-scrollbar">
             {/* Backdrop */}
             <div
               className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
@@ -414,7 +414,7 @@ const ServicesPage = () => {
             />
 
             {/* Modal Dialog Card */}
-            <div className="relative w-full max-w-2xl my-auto rounded-3xl border border-slate-700/80 bg-slate-900/95 p-5 sm:p-8 shadow-2xl z-10 font-poppins text-slate-100 max-h-[96vh] overflow-y-auto no-scrollbar">
+            <div data-lenis-prevent className="relative w-full max-w-2xl my-auto rounded-3xl border border-slate-700/80 bg-slate-900/95 p-5 sm:p-8 shadow-2xl z-10 font-poppins text-slate-100 max-h-[96vh] overflow-y-auto no-scrollbar">
               {/* Glow background */}
               <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
 

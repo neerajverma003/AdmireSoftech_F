@@ -24,6 +24,7 @@ import {
 import { getActiveFreelanceGigs, submitFreelanceProposal } from '../../api/freelanceApi';
 import { uploadFileToS3 } from '../../api/uploadApi';
 import { useAuth } from '../../context/AuthContext';
+import { useSmoothScroll } from '../../context/SmoothScrollContext';
 import Toast from '../../components/common/Toast';
 import TrustedBrands from '../Home/TrustedBrands';
 
@@ -40,6 +41,7 @@ const CATEGORIES = [
 ];
 
 const FreelancePage = () => {
+  const { scrollTo } = useSmoothScroll();
   const { user, isAuthenticated, openAuthModal } = useAuth();
 
   const [projects, setProjects] = useState([]);
@@ -232,7 +234,7 @@ const FreelancePage = () => {
   const handleScrollToProjects = () => {
     const el = document.getElementById('freelance-list');
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      scrollTo(el, { offset: -80, duration: 1.2 });
     }
   };
 
@@ -432,7 +434,7 @@ const FreelancePage = () => {
       {/* ──── APPLICATION MODAL (PORTAL) ──── */}
       {selectedProject &&
         createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div data-lenis-prevent className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
             {/* Backdrop */}
             <div
               onClick={() => setSelectedProject(null)}
@@ -440,7 +442,7 @@ const FreelancePage = () => {
             />
 
             {/* Modal Box */}
-            <div className="relative w-full max-w-2xl rounded-3xl border border-slate-700/80 bg-[#0B132B] p-6 sm:p-8 shadow-2xl shadow-cyan-500/10 z-10 my-auto text-left">
+            <div data-lenis-prevent className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-700/80 bg-[#0B132B] p-6 sm:p-8 shadow-2xl shadow-cyan-500/10 z-10 my-auto text-left">
               {/* Close button */}
               <button
                 type="button"

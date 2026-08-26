@@ -17,8 +17,10 @@ import QuickQuoteModal from '../common/QuickQuoteModal';
 import ContactModal from '../common/ContactModal';
 import AuthModal from '../auth/AuthModal';
 import { useAuth } from '../../context/AuthContext';
+import { useSmoothScroll } from '../../context/SmoothScrollContext';
 
 const Navbar = () => {
+  const { scrollTo } = useSmoothScroll();
   const [scrolled, setScrolled] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -81,7 +83,7 @@ const Navbar = () => {
         e?.preventDefault();
         const element = document.getElementById(hash);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+          scrollTo(element, { offset: -80, duration: 1.2 });
           window.history.pushState(null, '', `/#${hash}`);
         }
       } else {
