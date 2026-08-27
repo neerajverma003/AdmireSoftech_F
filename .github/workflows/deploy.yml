@@ -36,17 +36,27 @@ jobs:
             # create  dotenv file using secrets for production
             - name: Create .env file
               run: |
-                echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env
+                echo "VITE_API_URL=${{ secrets.VITE_API_BASE_URL}}" > .env
 
             # make build for production    
             - name : build the project
               run: npm run build
 
+            - name: Debug OIDC Token
+              run: |
+                TOKEN=$(curl -s \
+                -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+                "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" \
+                | jq -r '.value')
+
+                echo "$TOKEN" | cut -d '.' -f2 | base64 -d 2>/dev/null | jq '{sub, aud, repository, repository_owner, ref}'
+
+
             # assume github actions IAM role to get temporary AWS credentials
             - name: Configure AWS credentials
               uses: aws-actions/configure-aws-credentials@v4
               with:
-                role-to-assume: arn:aws:iam::447580526704:role/AdmireSoftechPublicFrontendDeployRole
+                role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
                 aws-region: ${{ secrets.AWS_REGION }}
 
             # deploy to S3 bucket
