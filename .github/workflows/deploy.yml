@@ -8,8 +8,7 @@ on:
 permissions:
     id-token: write
     contents: read
-
-
+    
 jobs:
     deploy:
         name: Build and Deploy to AWS
@@ -28,7 +27,6 @@ jobs:
                  node-version: '22'
                  cache: 'npm'
 
-            
             # Install dependencies
             - name: Install dependencies
               run: npm ci
@@ -36,11 +34,13 @@ jobs:
             # create  dotenv file using secrets for production
             - name: Create .env file
               run: |
-                echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env
+                echo "VITE_API_URL=${{ secrets.VITE_API_BASE_URL}}" > .env
 
             # make build for production    
             - name : build the project
               run: npm run build
+
+            
 
             # assume github actions IAM role to get temporary AWS credentials
             - name: Configure AWS credentials
