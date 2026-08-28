@@ -229,7 +229,7 @@ export default function AuthModal() {
           {/* Header */}
           <div className="text-center space-y-1.5 pb-4">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5" />
+              
               <span>Admire Softech Portal</span>
             </div>
             <h3 className="text-xl font-bold text-white tracking-tight">

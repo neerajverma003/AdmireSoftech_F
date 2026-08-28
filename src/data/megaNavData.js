@@ -61,19 +61,10 @@ export const megaNavData = [
       section2: {
         title: 'Start free',
         items: [
-          {
-            title: 'Meet a senior engineer',
-            href: '/contact',
-            icon: Video,
-          },
+          
           { title: 'Free assessments', href: '/services', icon: FileCheck2 },
-          { title: 'The DevOps audit', href: '/services', icon: Gauge },
-          {
-            title: 'Project estimation',
-            href: '#estimator',
-            icon: Calculator,
-            actionType: 'modal',
-          },
+          
+          
         ],
       },
     },
@@ -162,11 +153,7 @@ export const megaNavData = [
             icon: Calculator,
             actionType: 'modal',
           },
-          {
-            title: 'DevOps maturity check',
-            href: '/services',
-            icon: Gauge,
-          },
+         
         ],
       },
     },
