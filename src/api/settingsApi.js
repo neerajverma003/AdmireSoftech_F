@@ -7,6 +7,7 @@ export const fallbackSettings = {
   supportEmail: 'support@admiresoftech.com',
   contactPhone: '+91 (120) 456-7890',
   whatsappNumber: '+91 98765 43210',
+  whatsappPrefillText: 'Hello Admire Softech, I am interested in discussing an IT project!',
   headquarters: 'Sector 62, Noida, NCR, India',
   workingHours: 'Mon - Fri: 9:00 AM - 6:00 PM IST',
   websiteUrl: 'https://admiresoftech.com',

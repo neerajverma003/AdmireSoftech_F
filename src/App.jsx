@@ -19,6 +19,8 @@ import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { SmoothScrollProvider } from './context/SmoothScrollContext';
 import ScrollToTop from './components/common/ScrollToTop';
+import Chatbot from './components/chatbot';
+import WhatsAppWidget from './components/common/WhatsAppWidget';
 
 function App() {
   return (
@@ -64,6 +66,12 @@ function App() {
 
               {/* Footer */}
               <Footer />
+
+              {/* IT Services AI Chatbot (Bottom-Right) */}
+              <Chatbot />
+
+              {/* Standalone WhatsApp Chat Widget (Bottom-Left) */}
+              <WhatsAppWidget />
             </div>
           </Router>
         </SmoothScrollProvider>
