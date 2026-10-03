@@ -16,6 +16,7 @@ import Toast from '../../components/common/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import UiverseSocialIcons from '../../components/common/UiverseSocialIcons';
+import CaptchaBox from '../../components/common/CaptchaBox';
 
 const ContactPage = () => {
   const { user, isAuthenticated } = useAuth();
@@ -29,6 +30,15 @@ const ContactPage = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Captcha State
+  const [captchaPayload, setCaptchaPayload] = useState({
+    captchaToken: '',
+    captchaAnswer: '',
+    hp_field: '',
+  });
+  const [captchaError, setCaptchaError] = useState('');
+  const captchaRef = React.useRef(null);
 
   // Sync with user details if login state changes
   React.useEffect(() => {
@@ -58,6 +68,14 @@ const ContactPage = () => {
       return;
     }
 
+    if (!captchaPayload.captchaAnswer || !captchaPayload.captchaAnswer.trim()) {
+      setCaptchaError('Please enter the 6-character security code');
+      setToastMessage('Please complete the security verification.');
+      setToastType('error');
+      return;
+    }
+
+    setCaptchaError('');
     setLoading(true);
     setIsSuccess(false);
 
@@ -69,6 +87,9 @@ const ContactPage = () => {
         company,
         subject: subject || 'General Inquiry',
         message,
+        captchaToken: captchaPayload.captchaToken,
+        captchaAnswer: captchaPayload.captchaAnswer,
+        hp_field: captchaPayload.hp_field,
       });
 
       setLoading(false);
@@ -83,14 +104,24 @@ const ContactPage = () => {
       setCompany('');
       setSubject('');
       setMessage('');
+      captchaRef.current?.clear();
 
       setTimeout(() => {
         setIsSuccess(false);
       }, 3000);
-    } catch {
+    } catch (err) {
       setLoading(false);
-      setToastMessage('Failed to submit message. Please try again.');
+      const msg = err.message || 'Failed to submit message. Please try again.';
+      setToastMessage(msg);
       setToastType('error');
+      if (
+        msg.toLowerCase().includes('security') ||
+        msg.toLowerCase().includes('code') ||
+        msg.toLowerCase().includes('captcha')
+      ) {
+        setCaptchaError(msg);
+      }
+      captchaRef.current?.reload();
     }
   };
 
@@ -289,6 +320,14 @@ const ContactPage = () => {
                     className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all resize-none no-scrollbar"
                   />
                 </div>
+
+                {/* Security CAPTCHA Verification */}
+                <CaptchaBox
+                  ref={captchaRef}
+                  onChange={setCaptchaPayload}
+                  error={captchaError}
+                  variant="dark"
+                />
 
                 {/* Form Footer Actions */}
                 <div className="pt-3 flex flex-wrap items-center justify-between gap-4 border-t border-slate-800/60">

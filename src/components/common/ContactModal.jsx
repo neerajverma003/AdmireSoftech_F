@@ -20,6 +20,7 @@ import { getEstimatorConfig, DEFAULT_ESTIMATOR_CONFIG } from '../../api/estimato
 import Toast from './Toast';
 import { useAuth } from '../../context/AuthContext';
 import logoImg from '../../assets/images/as_logo_icon.png';
+import CaptchaBox from './CaptchaBox';
 
 const ContactModal = ({
   isOpen,
@@ -41,6 +42,15 @@ const ContactModal = ({
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+
+  // Captcha State
+  const [captchaPayload, setCaptchaPayload] = useState({
+    captchaToken: '',
+    captchaAnswer: '',
+    hp_field: '',
+  });
+  const [captchaError, setCaptchaError] = useState('');
+  const captchaRef = React.useRef(null);
 
   // Sync with user details when modal opens or user logs in
   useEffect(() => {
@@ -109,6 +119,14 @@ const ContactModal = ({
     if (!message.trim() || message.trim().length < minLen) {
       errors.message = `Please share a brief note about your requirements (${minLen}+ characters)`;
     }
+
+    if (!captchaPayload.captchaAnswer || !captchaPayload.captchaAnswer.trim()) {
+      setCaptchaError('Please enter the 6-character security code');
+      errors.captcha = 'Security code is required';
+    } else {
+      setCaptchaError('');
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -128,6 +146,9 @@ const ContactModal = ({
         service,
         budget,
         message: message.trim(),
+        captchaToken: captchaPayload.captchaToken,
+        captchaAnswer: captchaPayload.captchaAnswer,
+        hp_field: captchaPayload.hp_field,
       });
 
       setLoading(false);
@@ -144,12 +165,22 @@ const ContactModal = ({
         setPhone('');
         setMessage('');
         setFormErrors({});
+        captchaRef.current?.clear();
         onClose();
       }, 1600);
-    } catch {
+    } catch (err) {
       setLoading(false);
-      setToastMessage('Failed to submit message. Please try again.');
+      const msg = err.message || 'Failed to submit message. Please try again.';
+      setToastMessage(msg);
       setToastType('error');
+      if (
+        msg.toLowerCase().includes('security') ||
+        msg.toLowerCase().includes('code') ||
+        msg.toLowerCase().includes('captcha')
+      ) {
+        setCaptchaError(msg);
+      }
+      captchaRef.current?.reload();
     }
   };
 
@@ -388,6 +419,14 @@ const ContactModal = ({
                 <span className="text-[11px] text-red-400 mt-1 block">{formErrors.message}</span>
               )}
             </div>
+
+            {/* Security CAPTCHA Verification */}
+            <CaptchaBox
+              ref={captchaRef}
+              onChange={setCaptchaPayload}
+              error={captchaError}
+              variant="dark"
+            />
 
             {/* Action Buttons */}
             <div className="pt-3 flex items-center justify-between border-t border-slate-800/80">

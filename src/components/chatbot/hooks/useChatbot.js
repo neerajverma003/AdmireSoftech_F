@@ -192,6 +192,9 @@ export function useChatbot() {
         features: selectedFeatures,
         budget: selectedBudget || 'Flexible',
         notes: (formData.notes || '').trim(),
+        captchaToken: formData.captchaToken,
+        captchaAnswer: formData.captchaAnswer,
+        hp_field: formData.hp_field,
       };
 
       try {

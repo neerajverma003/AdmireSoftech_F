@@ -27,6 +27,7 @@ import { useAuth } from '../../context/AuthContext';
 import { submitQuoteRequest } from '../../api/quotesApi';
 import { getEstimatorConfig, DEFAULT_ESTIMATOR_CONFIG } from '../../api/estimatorConfigApi';
 import logoImg from '../../assets/images/as_logo_icon.png';
+import CaptchaBox from './CaptchaBox';
 
 const ICON_MAP = {
   Code2,
@@ -58,6 +59,15 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Captcha State
+  const [captchaPayload, setCaptchaPayload] = useState({
+    captchaToken: '',
+    captchaAnswer: '',
+    hp_field: '',
+  });
+  const [captchaError, setCaptchaError] = useState('');
+  const captchaRef = React.useRef(null);
 
   // Fetch live configuration on modal open
   useEffect(() => {
@@ -146,6 +156,13 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
       return;
     }
 
+    if (!captchaPayload.captchaAnswer || !captchaPayload.captchaAnswer.trim()) {
+      setCaptchaError('Please enter the 6-character security code');
+      setErrorMessage('Please complete the security verification code.');
+      return;
+    }
+    setCaptchaError('');
+
     setLoading(true);
     setIsSuccess(false);
 
@@ -160,6 +177,9 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
         timeline,
         estimatedBudget: currentScopeObj?.estPrice || currentScopeObj?.est || '₹1.5 Lakhs - ₹4 Lakhs',
         notes,
+        captchaToken: captchaPayload.captchaToken,
+        captchaAnswer: captchaPayload.captchaAnswer,
+        hp_field: captchaPayload.hp_field,
       });
 
       setLoading(false);
@@ -171,10 +191,20 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
         setStep(1);
         setNotes('');
         setIsSuccess(false);
+        captchaRef.current?.clear();
       }, 1800);
     } catch (err) {
       setLoading(false);
-      setErrorMessage(err.message || 'Failed to submit quote request. Please try again.');
+      const msg = err.message || 'Failed to submit quote request. Please try again.';
+      setErrorMessage(msg);
+      if (
+        msg.toLowerCase().includes('security') ||
+        msg.toLowerCase().includes('code') ||
+        msg.toLowerCase().includes('captcha')
+      ) {
+        setCaptchaError(msg);
+      }
+      captchaRef.current?.reload();
     }
   };
 
@@ -523,6 +553,14 @@ const QuickQuoteModal = ({ isOpen, onClose }) => {
                 className="w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 resize-none transition-colors"
               />
             </div>
+
+            {/* Security CAPTCHA Verification */}
+            <CaptchaBox
+              ref={captchaRef}
+              onChange={setCaptchaPayload}
+              error={captchaError}
+              variant="dark"
+            />
 
             {/* Form Actions */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-800/80">

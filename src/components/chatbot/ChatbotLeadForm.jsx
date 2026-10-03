@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Send, Loader2, User, Mail, Phone, FileText } from 'lucide-react';
+import CaptchaBox from '../common/CaptchaBox';
 
 export default function ChatbotLeadForm({ onSubmit, submitting, initialNotes = '' }) {
   const [formData, setFormData] = useState({
@@ -10,6 +11,15 @@ export default function ChatbotLeadForm({ onSubmit, submitting, initialNotes = '
   });
 
   const [errors, setErrors] = useState({});
+
+  // Captcha State
+  const [captchaPayload, setCaptchaPayload] = useState({
+    captchaToken: '',
+    captchaAnswer: '',
+    hp_field: '',
+  });
+  const [captchaError, setCaptchaError] = useState('');
+  const captchaRef = useRef(null);
 
   const validate = () => {
     const errs = {};
@@ -44,6 +54,13 @@ export default function ChatbotLeadForm({ onSubmit, submitting, initialNotes = '
       errs.phone = 'Please enter a valid phone number (8-15 digits)';
     }
 
+    if (!captchaPayload.captchaAnswer || !captchaPayload.captchaAnswer.trim()) {
+      errs.captcha = 'Please enter the 6-character code';
+      setCaptchaError('Please enter the 6-character security code');
+    } else {
+      setCaptchaError('');
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -63,6 +80,9 @@ export default function ChatbotLeadForm({ onSubmit, submitting, initialNotes = '
         email: cleanEmail.toLowerCase(),
         phone: formData.phone.trim(),
         notes: (formData.notes || '').trim(),
+        captchaToken: captchaPayload.captchaToken,
+        captchaAnswer: captchaPayload.captchaAnswer,
+        hp_field: captchaPayload.hp_field,
       });
     }
   };
@@ -138,6 +158,15 @@ export default function ChatbotLeadForm({ onSubmit, submitting, initialNotes = '
           className="w-full rounded-xl border border-slate-800 bg-[#050A18] px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all leading-relaxed"
         />
       </div>
+
+      {/* Security CAPTCHA Verification */}
+      <CaptchaBox
+        ref={captchaRef}
+        onChange={setCaptchaPayload}
+        error={captchaError}
+        variant="dark"
+        className="pt-1"
+      />
 
       {/* Submit Button */}
       <button
